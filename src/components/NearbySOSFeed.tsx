@@ -62,7 +62,7 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
                 {req.transcript || "Help required at this location."}
               </p>
 
-              {(req.latitude && req.longitude) && (
+              {(req.latitude !== undefined && req.longitude !== undefined) && (
                 <div className="mt-1 flex items-center">
                   <a 
                     href={`https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat || ''},${userLocation?.lng || ''}&destination=${req.latitude},${req.longitude}`}
