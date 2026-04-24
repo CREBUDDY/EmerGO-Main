@@ -36,21 +36,23 @@ service cloud.firestore {
 
     function isValidSOSEvent(data) {
       return data.keys().hasAll(['id', 'userId', 'deviceId', 'latitude', 'longitude', 'timestamp', 'status']) &&
-             data.keys().size() <= 25 &&
-             data.id is string && data.id.size() <= 128 &&
+             data.id is string &&
              data.userId == request.auth.uid &&
-             data.deviceId is string && data.deviceId.size() <= 128 &&
+             data.deviceId is string &&
              data.latitude is number &&
              data.longitude is number &&
              data.timestamp is timestamp &&
-             data.status in ['PENDING', 'SENT', 'DELIVERED', 'ACKNOWLEDGED', 'FAILED'] &&
-             (!('transcript' in data) || data.transcript is string && data.transcript.size() <= 2000) &&
+             data.status in ['PENDING', 'SENT', 'DELIVERED', 'ACKNOWLEDGED', 'FAILED', 'ACTIVE', 'RESOLVED'] &&
+             (!('transcript' in data) || data.transcript is string) &&
              (!('audioDataUrl' in data) || data.audioDataUrl is string) &&
-             (!('type' in data) || data.type in ['voice', 'silent', 'text']) &&
+             (!('type' in data) || data.type is string) &&
              (!('retryCount' in data) || data.retryCount is number) &&
              (!('deliveredTo' in data) || data.deliveredTo is list) &&
              (!('acknowledgedBy' in data) || data.acknowledgedBy is list) &&
-             (!('isResolved' in data) || data.isResolved is bool);
+             (!('isResolved' in data) || data.isResolved is bool) &&
+             (!('emergencyContacts' in data) || data.emergencyContacts is list) &&
+             (!('medicalInfo' in data) || data.medicalInfo is map) &&
+             (!('autoTriggerInfo' in data) || data.autoTriggerInfo is map);
     }
 
     function isValidNode(data) {
@@ -102,7 +104,7 @@ service cloud.firestore {
         isAdmin()
       );
       
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(existing().userId);
     }
 
     match /nodes/{nodeId} {
@@ -123,6 +125,11 @@ service cloud.firestore {
                        incoming().userId == existing().userId &&
                        incoming().timestamp == existing().timestamp;
       allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /hotspots/{hotspotId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /admins/{adminId} {

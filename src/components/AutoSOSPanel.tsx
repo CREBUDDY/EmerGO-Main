@@ -1,18 +1,32 @@
 import React, { useState } from 'react';
 import { useAutoSOS } from '../hooks/useAutoSOS';
+import { useThresholdPopup } from '../hooks/useThresholdPopup';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 
 export const AutoSOSPanel = React.memo(() => {
   const [enabled, setEnabled] = useState(false);
 
-  const { scores, totalScore, triggerStatus, threshold } = useAutoSOS(enabled, 70);
+  const { scores, totalScore, cancelTrigger, enabled: autoEnabled, threshold } = useAutoSOS(enabled, 50);
 
-  let statusText = enabled ? "MONITORING" : "STANDBY";
-  let statusColor = enabled ? "text-green-500" : "text-[#8E9299]";
-  let statusBg = enabled ? "bg-green-500/10 border-green-500/30" : "bg-[#2A2C32] border-[#3A3C42]";
+  const { showPopup, timer, handleConfirmOk } = useThresholdPopup({
+    riskScore: totalScore,
+    threshold: 50,
+    onConfirm: cancelTrigger,
+    enabled: autoEnabled,
+    scores: scores
+  });
 
-  if (totalScore >= threshold) {
+  let statusText = autoEnabled ? "MONITORING" : "STANDBY";
+  let statusColor = autoEnabled ? "text-green-500" : "text-[#8E9299]";
+  let statusBg = autoEnabled ? "bg-green-500/10 border-green-500/30" : "bg-[#2A2C32] border-[#3A3C42]";
+
+  if (showPopup) {
+    statusText = "TRIGGERING SOS in " + timer + "s";
+    statusColor = "text-red-500";
+    statusBg = "bg-red-500/10 border-red-500/30 animate-pulse";
+  } else if (totalScore >= threshold && autoEnabled) {
     statusText = "ALERT";
     statusColor = "text-red-500";
     statusBg = "bg-red-500/10 border-red-500/30";
@@ -75,7 +89,7 @@ export const AutoSOSPanel = React.memo(() => {
       <div className="p-4 flex justify-between items-start z-10 border-b border-[#2A2C32]/50">
          <div>
             <h1 className="text-2xl font-bold text-white tracking-tight uppercase leading-none mb-1">
-              EMERGO
+              AUTO SOS
             </h1>
             <span className="text-[9px] font-bold text-[#8E9299] tracking-widest uppercase">
               AI EMERGENCY DETECTION
@@ -141,6 +155,16 @@ export const AutoSOSPanel = React.memo(() => {
                className="data-[state=checked]:bg-[#22C55E]"
             />
          </div>
+
+         {showPopup && (
+           <div className="bg-red-500/20 border border-red-500 rounded-xl p-6 flex flex-col items-center justify-center gap-4 text-center mt-2 mb-2">
+              <h2 className="text-xl font-bold text-white uppercase tracking-wider">Are you ok?</h2>
+              <p className="text-white text-sm">Emergency trigger detected (Score: {totalScore}). SOS will be sent in <span className="font-bold text-red-400">{timer}</span> seconds.</p>
+              <Button onClick={handleConfirmOk} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold tracking-widest mt-2 uppercase">
+                 Yes, I am ok
+              </Button>
+           </div>
+         )}
 
          {/* Risk Analysis Card */}
          <div className="bg-[#151619] border border-[#2A2C32] rounded-xl p-4 flex flex-col">

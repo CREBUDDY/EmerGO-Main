@@ -6,6 +6,7 @@ import { MapDisplay } from './components/MapDisplay';
 import { SOSHistory } from './components/SOSHistory';
 import { NearbySOSFeed } from './components/NearbySOSFeed';
 import { AutoSOSPanel } from './components/AutoSOSPanel';
+import { HotspotsPanel } from './components/HotspotsPanel';
 import { DashboardGrid } from './components/DashboardGrid';
 import 'leaflet/dist/leaflet.css';
 import { Toaster, toast } from 'sonner';
@@ -112,8 +113,10 @@ export default function App() {
               lastActive: serverTimestamp(),
               role: 'user'
             });
+            console.log("User document created successfully");
           }
         } catch (e) {
+          console.error("Failed to create user doc:", e);
           handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}`);
         }
       }
@@ -166,19 +169,19 @@ export default function App() {
              capWatchId = await Geolocation.watchPosition(
                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
                (position, error) => {
-                 if (error) console.error("Geolocation error:", error);
+                 if (error) console.warn("Capacitor geolocation issue:", error);
                  if (position) {
                     updateLocation({ coords: { latitude: position.coords.latitude, longitude: position.coords.longitude } } as GeolocationPosition);
                  }
                }
              );
           } catch (e) {
-             console.error("Capacitor geolocation watch failed", e);
+             console.warn("Capacitor geolocation watch failed", e);
           }
        } else if ("geolocation" in navigator) {
           watchId = navigator.geolocation.watchPosition(
             updateLocation,
-            (error) => console.error("Geolocation error:", error),
+            (error) => console.warn("Geolocation warning:", error.message || error.code || "Unknown error"),
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
        }
@@ -347,7 +350,7 @@ export default function App() {
               <Shield className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight uppercase flex items-center justify-center gap-2">
-              EMERGO ACCESS
+              AUTO SOS ACCESS
               <Shield className="w-5 h-5 text-green-500" />
             </h1>
             <p className="status-label">PREMIUM EMERGENCY NETWORK</p>
@@ -434,7 +437,7 @@ export default function App() {
             <div className="min-w-0 flex items-center gap-4">
               <div>
                 <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate uppercase flex items-center gap-2">
-                  EMERGO
+                  AUTO SOS
                   <Shield className="w-4 h-4 text-green-500" />
                 </h1>
                 <span className="status-label block truncate !text-[8.5px] sm:!text-[10px]">SECURE EMERGENCY NETWORK v1.0</span>
@@ -484,6 +487,7 @@ export default function App() {
                 <NearbySOSFeed userLocation={userLocation} />
                 <SOSHistory />
               </div>
+              <HotspotsPanel userLatitude={userLocation?.lat || null} userLongitude={userLocation?.lng || null} />
             </div>
           }
         />

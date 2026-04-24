@@ -5,7 +5,7 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { getDeviceId } from '@/src/lib/device';
 import { toast } from 'sonner';
-import { AlertCircle, MapPin, CheckCircle } from 'lucide-react';
+import { AlertCircle, MapPin, CheckCircle, Navigation } from 'lucide-react';
 
 export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat: number, lng: number } | null }) => {
   const nearbyRequests = useNearbySOS(userLocation);
@@ -61,6 +61,20 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
               <p className="text-xs text-white/90 font-mono line-clamp-2">
                 {req.transcript || "Help required at this location."}
               </p>
+
+              {(req.latitude && req.longitude) && (
+                <div className="mt-1 flex items-center">
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat || ''},${userLocation?.lng || ''}&destination=${req.latitude},${req.longitude}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-100 hover:text-white transition-colors text-[10px] font-bold uppercase rounded-md border border-red-500/30 w-fit"
+                  >
+                    <Navigation className="w-3 h-3" />
+                    Trace Location
+                  </a>
+                </div>
+              )}
 
               {req.audioDataUrl && (
                 <div className="mt-1">

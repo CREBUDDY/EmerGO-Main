@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SOSEvent } from '../types/sos';
 import { getDeviceId } from '../lib/device';
 import { auth, db as firestore, handleFirestoreError, OperationType } from '../lib/firebase';
-import { onSnapshot, query, collection, where, deleteDoc, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { onSnapshot, query, collection, where, deleteDoc, doc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export const useSOS = () => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -19,7 +19,14 @@ export const useSOS = () => {
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const events: SOSEvent[] = [];
-      snapshot.forEach(docSnap => events.push({ id: docSnap.id, ...docSnap.data() } as SOSEvent));
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        events.push({ 
+          id: docSnap.id, 
+          ...data,
+          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp || Date.now())
+        } as unknown as SOSEvent);
+      });
       // sort reverse chronological
       events.sort((a, b) => b.timestamp - a.timestamp);
       setLocalEvents(events);
@@ -61,29 +68,49 @@ export const useSOS = () => {
   ) => {
     if (!auth.currentUser) throw new Error("Must be logged in to broadcast SOS");
 
-    const newEvent: SOSEvent = {
+    let base64Audio: string | undefined = undefined;
+    if (audioBlob) {
+      try {
+        const reader = new FileReader();
+        base64Audio = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(audioBlob);
+        });
+      } catch (err) {
+        console.error("Failed to convert audioBlob to Base64", err);
+      }
+    }
+
+    const newEvent: any = {
       id: uuidv4(),
       userId: auth.currentUser.uid,
       deviceId: getDeviceId(),
-      timestamp: Date.now(),
+      timestamp: serverTimestamp(),
       latitude,
       longitude,
-      transcript: message,
+      transcript: message || "Help me!",
       type,
       status: 'PENDING',
       retryCount: 0,
       isResolved: false,
-      audioBlob: undefined, // Will be replaced by dataUrl later if applicable
       emergencyContacts,
       medicalInfo,
       deliveredTo: [],
       acknowledgedBy: [],
-      autoTriggerInfo
+      autoTriggerInfo,
+      audioDataUrl: base64Audio
     };
+
+    const firestoreEvent = Object.fromEntries(
+      Object.entries(newEvent).filter(([_, v]) => v !== undefined)
+    );
+
+    console.log("Broadcasting SOS structure:", JSON.stringify(firestoreEvent));
+    console.log("uid matches auth:", auth.currentUser.uid === firestoreEvent.userId);
 
     setIsSyncing(true);
     try {
-      await setDoc(doc(firestore, 'sos_events', newEvent.id), newEvent);
+      await setDoc(doc(firestore, 'sos_events', newEvent.id), firestoreEvent);
 
       // Broadcast SMS via Backend if emergency contacts exist
       if (emergencyContacts.length > 0) {

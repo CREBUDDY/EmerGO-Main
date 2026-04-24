@@ -55,7 +55,7 @@ export const PermissionsModal: React.FC = () => {
           checkClose();
         },
         (err) => {
-          console.error("Location request failed:", err);
+          console.warn("Location request failed:", err.message || err.code);
           if (err.code === err.PERMISSION_DENIED) {
             setLocStatus('denied');
           }
@@ -108,7 +108,7 @@ export const PermissionsModal: React.FC = () => {
             System Permissions Required
           </DialogTitle>
           <DialogDescription className="text-[#8E9299] text-xs">
-            EmerGo requires explicit access to your device's hardware to guarantee 
+            Auto SOS requires explicit access to your device's hardware to guarantee 
             reliable emergency dispatching and offline fallbacks.
           </DialogDescription>
         </DialogHeader>

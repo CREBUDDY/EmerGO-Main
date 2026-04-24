@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSOS } from './useSOS';
 
 export type RiskScore = {
   fallScore: Int;        // 0-40
@@ -13,8 +12,6 @@ export type RiskScore = {
 export type Int = number;
 
 export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
-  const { broadcastSOS } = useSOS();
-  
   const [scores, setScores] = useState<RiskScore>({
     fallScore: 0,
     movementScore: 0,
@@ -27,8 +24,6 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
   const totalScore = scores.fallScore + scores.movementScore + scores.inactivityScore + scores.orientationScore + scores.impactScore + scores.voiceScore;
 
   const [triggerStatus, setTriggerStatus] = useState<"Monitoring..." | "Triggering SOS in 5s..." | "SOS TRIGGERED">("Monitoring...");
-  const [countdown, setCountdown] = useState<number | null>(null);
-
   const lastTriggerTime = useRef<number>(0);
   const COOLDOWN_MS = 2 * 60 * 1000;
 
@@ -83,7 +78,6 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
         impactScore: 0,
         voiceScore: 0
       };
-      setCountdown(null);
       setTriggerStatus("Monitoring...");
       return;
     }
@@ -324,75 +318,7 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
     };
   }, [enabled]);
 
-  // Trigger Logic
-  useEffect(() => {
-    if (!enabled) return;
-
-    if (Date.now() - lastTriggerTime.current < COOLDOWN_MS) {
-       return;
-    }
-
-    if (triggerStatus === "SOS TRIGGERED" || countdown !== null) return;
-
-    if (totalScore >= threshold) {
-       setTriggerStatus("Triggering SOS in 5s...");
-       setCountdown(5);
-    }
-  }, [totalScore, enabled, threshold, countdown, triggerStatus]);
-
-  // Countdown execution
-  useEffect(() => {
-    if (countdown === null) return;
-    
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      setTriggerStatus("SOS TRIGGERED");
-      lastTriggerTime.current = Date.now();
-      
-      const payloadDescription = `AUTO TRIGGERED (Score: ${totalScore}). Fall: ${scores.fallScore}, Movement: ${scores.movementScore}, Inactivity: ${scores.inactivityScore}, Orientation: ${scores.orientationScore}, Impact: ${scores.impactScore}`;
-      
-      const triggerBroadcast = async (lat: number, lng: number) => {
-        try {
-          await broadcastSOS('text', payloadDescription, lat, lng, undefined, [], {}, {
-            triggerType: "AUTO",
-            score: totalScore,
-            breakdown: { voice: 0, motion: scores.movementScore, context: 0, behavior: 0 },
-            reasons: [`Fall: ${scores.fallScore}`, `Impact: ${scores.impactScore}`, `Inactivity: ${scores.inactivityScore}`]
-          });
-        } catch (e) {
-          console.error("Auto SOS broadcast failed", e);
-        }
-      };
-
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => triggerBroadcast(pos.coords.latitude, pos.coords.longitude),
-          () => triggerBroadcast(0, 0),
-          { timeout: 5000 }
-        );
-      } else {
-        triggerBroadcast(0, 0);
-      }
-      
-      setTimeout(() => {
-        setCountdown(null);
-        setTriggerStatus("Monitoring...");
-         maxScores.current = {
-            fallScore: 0,
-            movementScore: 0,
-            inactivityScore: 0,
-            orientationScore: 0,
-            impactScore: 0
-         };
-         setScores(maxScores.current);
-      }, 5000);
-    }
-  }, [countdown, broadcastSOS, totalScore, scores]);
-
   const cancelTrigger = useCallback(() => {
-    setCountdown(null);
     setTriggerStatus("Monitoring...");
     lastTriggerTime.current = Date.now() - COOLDOWN_MS + 10000;
     maxScores.current = {
@@ -400,7 +326,8 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
       movementScore: 0,
       inactivityScore: 0,
       orientationScore: 0,
-      impactScore: 0
+      impactScore: 0,
+      voiceScore: 0
     };
     setScores(maxScores.current);
   }, [COOLDOWN_MS]);
@@ -409,7 +336,7 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
     scores,
     totalScore,
     triggerStatus,
-    countdown,
+    setTriggerStatus,
     cancelTrigger,
     enabled,
     threshold

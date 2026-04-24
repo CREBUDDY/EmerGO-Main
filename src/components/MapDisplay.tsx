@@ -166,7 +166,7 @@ export const MapDisplay = React.memo(() => {
           longitude: data.longitude,
           type: 'SOS',
           status: 'ACTIVE',
-          timestamp: data.timestamp,
+          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp || Date.now()),
           message: data.message || data.transcript
         };
       }).filter(n => n.latitude && n.longitude);
