@@ -1,0 +1,8 @@
+{
+  "name": "Remix: AESN (AI Emergency SOS Network)",
+  "description": "A fully functional emergency SOS network that works both online and offline using mesh networking and AI-powered voice-to-text.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

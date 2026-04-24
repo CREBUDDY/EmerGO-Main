@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user" },
+        "name": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "photoUrl": { "type": "string", "description": "Profile picture URL" },
+        "lastActive": { "type": "number", "description": "Timestamp of last activity" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User access level" },
+        "bio": { "type": "string", "description": "Short user biography" },
+        "medicalConditions": { "type": "string", "description": "Crucial medical information" },
+        "bloodType": { "type": "string", "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], "description": "User blood type" },
+        "emergencyContacts": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "phone": { "type": "string" },
+              "email": { "type": "string" }
+            }
+          }, 
+          "description": "List of emergency contacts" 
+        }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "SOSEvent": {
+      "title": "SOS Event",
+      "description": "Emergency SOS broadcast data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the request" },
+        "userId": { "type": "string", "description": "UID of the person in distress" },
+        "deviceId": { "type": "string", "description": "Persistent device UUID" },
+        "transcript": { "type": "string", "description": "AI-generated transcript or custom message" },
+        "type": { "type": "string", "enum": ["voice", "silent", "text"], "description": "Type of SOS request" },
+        "latitude": { "type": "number", "description": "GPS Latitude" },
+        "longitude": { "type": "number", "description": "GPS Longitude" },
+        "timestamp": { "type": "number", "description": "Time of broadcast" },
+        "audioDataUrl": { "type": "string", "description": "Base64 encoded audio string" },
+        "status": { "type": "string", "enum": ["PENDING", "SENT", "DELIVERED", "ACKNOWLEDGED", "FAILED"], "description": "Delivery status" },
+        "retryCount": { "type": "number", "description": "Number of sync retries" },
+        "emergencyContacts": { "type": "array", "items": { "type": "string" }, "description": "List of contact emails/phones" },
+        "isResolved": { "type": "boolean", "description": "Whether help has arrived" },
+        "medicalInfo": {
+          "type": "object",
+          "properties": {
+            "bloodType": { "type": "string" },
+            "conditions": { "type": "string" }
+          }
+        },
+        "deliveredTo": { "type": "array", "items": { "type": "string" }, "description": "List of device IDs that received this SOS" },
+        "acknowledgedBy": { "type": "array", "items": { "type": "string" }, "description": "List of user UIDs that acknowledged help" },
+        "autoTriggerInfo": {
+          "type": "object",
+          "properties": {
+            "triggerType": { "type": "string" },
+            "score": { "type": "number" },
+            "reasons": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "required": ["id", "userId", "deviceId", "latitude", "longitude", "timestamp", "status"]
+    },
+    "Node": {
+      "title": "Mesh Node",
+      "description": "Information about a device in the mesh network",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Node identifier" },
+        "lastSeen": { "type": "number", "description": "Last heartbeat timestamp" },
+        "batteryLevel": { "type": "number", "description": "Current battery percentage" },
+        "isRelay": { "type": "boolean", "description": "Whether the node can relay messages" },
+        "latitude": { "type": "number", "description": "GPS Latitude" },
+        "longitude": { "type": "number", "description": "GPS Longitude" }
+      },
+      "required": ["id", "lastSeen"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/sos_events/{eventId}": {
+      "schema": "SOSEvent",
+      "description": "Active and past SOS events"
+    },
+    "/nodes/{nodeId}": {
+      "schema": "Node",
+      "description": "Mesh network node status"
+    }
+  }
+}

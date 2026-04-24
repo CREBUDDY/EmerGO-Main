@@ -1,0 +1,164 @@
+src/lib/device.ts:  if (!id) {
+src/lib/syncService.ts:  if (obj instanceof Blob || obj instanceof Date) {
+src/lib/syncService.ts:  if (Array.isArray(obj)) {
+src/lib/syncService.ts:  } else if (obj !== null && typeof obj === 'object') {
+src/lib/syncService.ts:      if (obj[key] !== undefined) {
+src/lib/syncService.ts:    if (payload.audioBlob && !payload.audioDataUrl) {
+src/lib/syncService.ts:    if (event.retryCount > 10) continue; // Max retries exceeded
+src/lib/syncService.ts:      if (typeof window !== 'undefined') {
+src/lib/syncService.ts:    if (navigator.onLine) {
+src/lib/MeshNetworkService.ts:    if (!MeshNetworkService.instance) {
+src/hooks/useNotifications.ts:    if (!auth.currentUser) return;
+src/hooks/useNotifications.ts:        if (age > 7 * 24 * 60 * 60 * 1000) {
+src/hooks/useNotifications.ts:        if (!data.read) {
+src/hooks/useNotifications.ts:    if (!auth.currentUser) return;
+src/hooks/useAutoSOS.ts:    if (!enabled) return;
+src/hooks/useAutoSOS.ts:    if (!calibration.isCalibrating) {
+src/hooks/useAutoSOS.ts:      if (SpeechRecognition) {
+src/hooks/useAutoSOS.ts:          if (enabled) {
+src/hooks/useAutoSOS.ts:      if (accel && accel.x !== null && accel.y !== null && accel.z !== null) {
+src/hooks/useAutoSOS.ts:        if (!event.acceleration) mag = Math.abs(mag - 9.8); 
+src/hooks/useAutoSOS.ts:        if (motionRef.current.length > 50) motionRef.current.shift();
+src/hooks/useAutoSOS.ts:      if (speed !== null && speed >= 0) {
+src/hooks/useAutoSOS.ts:      } else if (lastLocationRef.current) {
+src/hooks/useAutoSOS.ts:        if (dt > 0) {
+src/hooks/useAutoSOS.ts:    if ("geolocation" in navigator) {
+src/hooks/useAutoSOS.ts:      if (volumePollerRef.current) clearInterval(volumePollerRef.current);
+src/hooks/useAutoSOS.ts:      if (stream) stream.getTracks().forEach(t => t.stop());
+src/hooks/useAutoSOS.ts:      if (audioCtx) audioCtx.close().catch(()=>{});
+src/hooks/useAutoSOS.ts:      if (recognitionRef.current) {
+src/hooks/useAutoSOS.ts:      if (watchId) navigator.geolocation.clearWatch(watchId);
+src/hooks/useAutoSOS.ts:    if (!enabled) return;
+src/hooks/useAutoSOS.ts:      if (motionRef.current.length > 0) {
+src/hooks/useAutoSOS.ts:        if (calibration.calProfile) {
+src/hooks/useAutoSOS.ts:    if (!enabled) {
+src/hooks/useAutoSOS.ts:    if (Date.now() - lastTriggerTime.current < COOLDOWN_MS) {
+src/hooks/useAutoSOS.ts:    if (scoring.score >= TRIGGER_THRESHOLD) {
+src/hooks/useAutoSOS.ts:      if (countdown === null && triggerStatus !== "SOS TRIGGERED" && triggerStatus !== "Triggering SOS in 5s...") {
+src/hooks/useAutoSOS.ts:          if (scoring.score >= TRIGGER_THRESHOLD) {
+src/hooks/useAutoSOS.ts:      if (countdown !== null && triggerStatus !== "SOS TRIGGERED") {
+src/hooks/useAutoSOS.ts:    if (countdown === null) return;
+src/hooks/useAutoSOS.ts:    if (countdown > 0) {
+src/hooks/useAutoSOS.ts:    } else if (countdown === 0) {
+src/hooks/useCalibration.ts:    if (saved) {
+src/hooks/useCalibration.ts:    if (!analyserRef.current || !dataArrayRef.current) return 0;
+src/hooks/useCalibration.ts:    if ("geolocation" in navigator) {
+src/hooks/useCalibration.ts:    if ('DeviceMotionEvent' in window) {
+src/hooks/useCalibration.ts:    if (!sensorStatus.voice) { confV = 0; q = "WEAK"; }
+src/hooks/useCalibration.ts:    else if (maxV < baseV + 5) { confV = 0.5; q = "WEAK"; }
+src/hooks/useCalibration.ts:    if (!sensorStatus.motion) { confM = 0; q = "WEAK"; }
+src/hooks/useCalibration.ts:    else if (maxM < baseM + 2) { confM = 0.5; q = "WEAK"; }
+src/hooks/useCalibration.ts:    if (audioStreamRef.current) {
+src/hooks/useCalibration.ts:    if (audioContextRef.current) {
+src/hooks/useCalibration.ts:    if (audioStreamRef.current) {
+src/hooks/useCalibration.ts:     if (isCalibrating || !calProfile) return;
+src/hooks/useCalibration.ts:     if (vLevel < calProfile.max.voice && mLevel < calProfile.max.motion) {
+src/hooks/useCalibration.ts:       if (baselineRollingRef.current.voice.length > 100) {
+src/hooks/useCalibration.ts:       if (baselineRollingRef.current.motion.length > 100) {
+src/hooks/useCalibration.ts:       if (Math.random() < 0.05 && baselineRollingRef.current.voice.length > 50) {
+src/hooks/usePermissions.ts:      if ('permissions' in navigator) {
+src/hooks/usePermissions.ts:          if ('Notification' in window) {
+src/hooks/usePermissions.ts:    if ('Notification' in window) {
+src/hooks/useUserProfile.ts:      if (!auth.currentUser) return;
+src/hooks/useUserProfile.ts:        if (docSnap.exists()) {
+src/hooks/useUserProfile.ts:    if (!auth.currentUser) return;
+src/hooks/useNearbySOS.ts:    if (!auth.currentUser || !userLocation) return;
+src/hooks/useSOS.ts:    if (!auth.currentUser) return;
+src/hooks/useSOS.ts:        if (change.type === 'added' || change.type === 'modified') {
+src/hooks/useSOS.ts:          if (!localEvent) {
+src/hooks/useSOS.ts:    if (!auth.currentUser) throw new Error("Must be logged in to broadcast SOS");
+src/hooks/useSOS.ts:    if (navigator.onLine) {
+src/hooks/useVoiceRecorder.ts:  if (typeof window === 'undefined') return null;
+src/hooks/useVoiceRecorder.ts:        if (event.data.size > 0) {
+src/hooks/useVoiceRecorder.ts:      if (SpeechRecognition) {
+src/hooks/useVoiceRecorder.ts:          if (event.error !== 'no-speech') {
+src/hooks/useVoiceRecorder.ts:      if (!mediaRecorderRef.current) {
+src/hooks/useVoiceRecorder.ts:      if (mediaRecorderRef.current.state !== 'inactive') {
+src/hooks/useVoiceRecorder.ts:      if (recognitionRef.current) {
+src/components/SystemStatus.tsx:      if ('getBattery' in navigator) {
+src/components/SystemStatus.tsx:      if (navigator.onLine) {
+src/components/SystemStatus.tsx:        if (conn) {
+src/components/SystemStatus.tsx:    if ("geolocation" in navigator) {
+src/components/SystemStatus.tsx:      if (watchId) navigator.geolocation.clearWatch(watchId);
+src/components/ProfileModal.tsx:    if (profile) {
+src/components/CalibrationPanel.tsx:      if (!isCalibrating || calibrationStep === 0 || calibrationStep === 1) return;
+src/components/CalibrationPanel.tsx:      if (accel && accel.x !== null && accel.y !== null && accel.z !== null) {
+src/components/CalibrationPanel.tsx:        if (!event.acceleration) mag = Math.abs(mag - 9.8); 
+src/components/CalibrationPanel.tsx:        if (calibrationStep === 2) {
+src/components/CalibrationPanel.tsx:        } else if (calibrationStep === 3) {
+src/components/CalibrationPanel.tsx:    if (isCalibrating) {
+src/components/CalibrationPanel.tsx:        if (calibrationStep === 2) {
+src/components/CalibrationPanel.tsx:        } else if (calibrationStep === 3) {
+src/components/CalibrationPanel.tsx:    if (calibrationStep === 2) {
+src/components/CalibrationPanel.tsx:    } else if (calibrationStep === 3) {
+src/components/CalibrationPanel.tsx:  if (!isCalibrating && !calProfile) {
+src/components/CalibrationPanel.tsx:  if (calProfile && !isCalibrating) {
+src/components/AutoSOSPanel.tsx:  if (scoring.score >= 70) {
+src/components/AutoSOSPanel.tsx:  } else if (scoring.score >= 40) {
+src/components/NotificationDropdown.tsx:    if (daysDifference === 0) {
+src/components/NotificationDropdown.tsx:      if (hoursDiff === 0) {
+src/components/Radar.tsx:        if (data.latitude && data.longitude) {
+src/components/Radar.tsx:          if (distance > MAX_RADAR_RANGE_KM) {
+src/components/Radar.tsx:        if (isOutOfRange) status = 'out-of-range';
+src/components/Radar.tsx:        else if (data.batteryLevel < 20) status = 'low-battery';
+src/components/Radar.tsx:        else if (data.isRelay) status = 'relaying';
+src/components/Radar.tsx:      if (detectedNodes.length === 0) {
+src/components/NearbySOSFeed.tsx:  if (!userLocation) {
+src/components/MapDisplay.tsx:      if (currentUserNode && currentUserNode.latitude && currentUserNode.longitude) {
+src/components/MapDisplay.tsx:      if ('detail' in event && event.type === 'FOCUS_MAP') {
+src/components/MapDisplay.tsx:      } else if ('data' in event && event.type === 'message' && event.data?.type === 'FOCUS_MAP') {
+src/components/MapDisplay.tsx:      if (lat && lng) {
+src/components/MapDisplay.tsx:            if (node.id === auth.currentUser?.uid || !node.latitude || !node.longitude) return null;
+src/components/MapDisplay.tsx:            if (!sos.latitude || !sos.longitude) return null;
+src/components/SOSHistory.tsx:    if (!auth.currentUser) return;
+src/components/SOSHistory.tsx:        if (role === 'admin') {
+src/components/SOSHistory.tsx:      if (unsubscribe) unsubscribe();
+src/components/SOSPanel.tsx:      if (!auth.currentUser) return;
+src/components/SOSPanel.tsx:        if (userDoc.exists()) {
+src/components/SOSPanel.tsx:          if (data.emergencyContacts) setContacts(data.emergencyContacts);
+src/components/SOSPanel.tsx:    if (!auth.currentUser) return;
+src/components/SOSPanel.tsx:    if (!auth.currentUser) return;
+src/components/SOSPanel.tsx:    if (!newContact.name || (!newContact.phone && !newContact.email)) {
+src/components/SOSPanel.tsx:      if (type === 'voice') {
+src/components/SOSPanel.tsx:      } else if (type === 'silent') {
+src/components/SOSPanel.tsx:    if (isRecording) {
+src/App.tsx:    if ("Notification" in window) {
+src/App.tsx:        if (permission === 'granted') {
+src/App.tsx:               if (currentToken) {
+src/App.tsx:      if (event.data && event.data.type === 'FOCUS_MAP') {
+src/App.tsx:      if (user) {
+src/App.tsx:          if (!snap.exists()) {
+src/App.tsx:    if (!user) return;
+src/App.tsx:        if (userSnap.exists()) {
+src/App.tsx:    if ("geolocation" in navigator) {
+src/App.tsx:      if (watchId) navigator.geolocation.clearWatch(watchId);
+src/App.tsx:    if (!user || !userLocation) return;
+src/App.tsx:        if (change.type === 'added') {
+src/App.tsx:          if (sos.deviceId === currentDeviceId) return;
+src/App.tsx:          if (now - sos.timestamp > MAX_AGE_MS) return;
+src/App.tsx:          if (notifiedSosIds.current.has(sos.id)) return;
+src/App.tsx:          if (sos.latitude && sos.longitude) {
+src/App.tsx:            if (distance <= 10) { // Within 10km
+src/App.tsx:              if ("Notification" in window && Notification.permission === "granted") {
+src/App.tsx:  if (loading) {
+src/App.tsx:  if (!user) {
+src/services/aiScoringService.ts:  if (matchCount > 0) {
+src/services/aiScoringService.ts:  if (cal && data.voiceLevel > 0) {
+src/services/aiScoringService.ts:    if (normalized > 50 && matchCount === 0) {
+src/services/aiScoringService.ts:    } else if (matchCount > 0) {
+src/services/aiScoringService.ts:  if (cal) {
+src/services/aiScoringService.ts:    if (normalized > 50) {
+src/services/aiScoringService.ts:    if (data.motionAccel > 15) {
+src/services/aiScoringService.ts:    } else if (data.motionAccel > 8) {
+src/services/aiScoringService.ts:  if (data.speedKmH > 60) {
+src/services/aiScoringService.ts:  } else if (data.speedKmH > 15) {
+src/services/aiScoringService.ts:  if (data.isAwayFromHome) {
+src/services/aiScoringService.ts:  if (data.interactionRate > 100) {
+src/services/aiScoringService.ts:  } else if (data.interactionRate === 0 && data.motionAccel > 15) {
+src/services/aiScoringService.ts:  } else if (data.interactionRate > 50) {
+src/services/aiScoringService.ts:  if (voiceScore > 20) activeSignals++;
+src/services/aiScoringService.ts:  if (motionScore > 20) activeSignals++;
+src/services/aiScoringService.ts:  if (contextScore > 40) activeSignals++;
+src/services/aiScoringService.ts:  if (behaviorScore > 30) activeSignals++;
+src/services/aiScoringService.ts:  if (activeSignals < 2 && totalScore > 65) {
+src/services/aiScoringService.ts:    if (voiceScore >= 80) {

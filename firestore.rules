@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definitions
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn(); }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == "nextearner@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'lastActive']) &&
+             data.keys().size() <= 12 &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.lastActive is timestamp &&
+             (!('role' in data) || data.role in ['user', 'admin']) &&
+             (!('bloodType' in data) || data.bloodType in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']) &&
+             (!('medicalConditions' in data) || data.medicalConditions is string && data.medicalConditions.size() <= 1000);
+    }
+
+    function isValidSOSEvent(data) {
+      return data.keys().hasAll(['id', 'userId', 'deviceId', 'latitude', 'longitude', 'timestamp', 'status']) &&
+             data.keys().size() <= 25 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId == request.auth.uid &&
+             data.deviceId is string && data.deviceId.size() <= 128 &&
+             data.latitude is number &&
+             data.longitude is number &&
+             data.timestamp is timestamp &&
+             data.status in ['PENDING', 'SENT', 'DELIVERED', 'ACKNOWLEDGED', 'FAILED'] &&
+             (!('transcript' in data) || data.transcript is string && data.transcript.size() <= 2000) &&
+             (!('audioDataUrl' in data) || data.audioDataUrl is string) &&
+             (!('type' in data) || data.type in ['voice', 'silent', 'text']) &&
+             (!('retryCount' in data) || data.retryCount is number) &&
+             (!('deliveredTo' in data) || data.deliveredTo is list) &&
+             (!('acknowledgedBy' in data) || data.acknowledgedBy is list) &&
+             (!('isResolved' in data) || data.isResolved is bool);
+    }
+
+    function isValidNode(data) {
+      return data.keys().hasAll(['id', 'lastSeen', 'latitude', 'longitude', 'batteryLevel', 'isRelay']) &&
+             data.id == request.auth.uid &&
+             data.lastSeen is timestamp &&
+             data.latitude is number &&
+             data.longitude is number &&
+             data.batteryLevel is number &&
+             data.isRelay is bool;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'type', 'message', 'timestamp', 'read']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['SOS_ALERT', 'SYSTEM', 'ACK'] &&
+             data.message is string && data.message.size() <= 1000 &&
+             data.timestamp is timestamp &&
+             data.read is bool;
+    }
+
+    // Phase 4: Collection Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isVerified() && isValidUser(incoming()) && 
+                      incoming().lastActive == request.time &&
+                      (incoming().role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().role == existing().role || isAdmin()
+      ) && incoming().uid == existing().uid &&
+      incoming().lastActive == request.time; 
+      allow delete: if isAdmin();
+    }
+
+    match /sos_events/{eventId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.isResolved == false || resource.data.userId == request.auth.uid));
+      
+      allow create: if isVerified() && isValidId(eventId) && isValidSOSEvent(incoming()) &&
+                      incoming().timestamp == request.time &&
+                      exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      
+      allow update: if isSignedIn() && (
+        (isOwner(existing().userId) && !existing().get('isResolved', false) && isValidSOSEvent(incoming()) &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'transcript', 'latitude', 'longitude', 'isResolved', 'timestamp', 'audioDataUrl', 'type', 'retryCount', 'emergencyContacts', 'medicalInfo', 'autoTriggerInfo']) &&
+         (incoming().timestamp == request.time || incoming().timestamp == existing().timestamp)) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['deliveredTo', 'acknowledgedBy', 'status']) && 
+         isSignedIn()) || 
+        isAdmin()
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /nodes/{nodeId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(nodeId) && isValidNode(incoming()) && 
+                      incoming().lastSeen == request.time;
+      allow update: if isOwner(nodeId) && isValidNode(incoming()) && 
+                      incoming().lastSeen == request.time;
+      allow delete: if isOwner(nodeId) || isAdmin();
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isVerified() && isValidNotification(incoming()) && 
+                      incoming().timestamp == request.time;
+      allow update: if isOwner(existing().userId) && 
+                       incoming().diff(existing()).affectedKeys().hasOnly(['read']) &&
+                       incoming().userId == existing().userId &&
+                       incoming().timestamp == existing().timestamp;
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // Managed via console
+    }
+  }
+}
