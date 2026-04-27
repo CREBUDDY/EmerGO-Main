@@ -616,7 +616,7 @@ function AppContent() {
           }
           right={
             <div className="flex flex-col gap-[16px] w-full h-full">
-              <div className="w-full h-[400px] lg:h-[500px] xl:h-[600px] flex-shrink-0">
+              <div className="w-full h-[500px] md:h-[600px] lg:h-[700px] xl:h-[800px] flex-shrink-0">
                 <MapDisplay />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] flex-1">

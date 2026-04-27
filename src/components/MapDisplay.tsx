@@ -293,55 +293,55 @@ export const MapDisplay = React.memo(() => {
         }
       `}</style>
       {/* Top Filter Bar */}
-      <div className="bg-transparent p-4 z-[10] relative shrink-0">
-         <div className="bg-card/90 dark:bg-black/60 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-2xl p-3 shadow-2xl flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
+      <div className="bg-transparent p-2 sm:p-4 z-[10] relative shrink-0">
+          <div className="bg-card/90 dark:bg-black/60 backdrop-blur-xl border border-border rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-[0_4px_20px_rgb(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.4)] flex flex-col gap-2.5 sm:gap-4 w-full">
             
-            {/* Map Header */}
-            <div className="flex items-center gap-3 text-foreground shrink-0 px-2">
-               <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10 shrink-0 shadow-inner">
-                  <Map className="w-5 h-5 text-foreground/70" />
+            {/* Map Header - Compact on mobile */}
+            <div className="flex items-center gap-2.5 text-foreground shrink-0 px-1">
+               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-muted/50 flex items-center justify-center border border-border shrink-0 shadow-inner">
+                  <Map className="w-4 h-4 sm:w-5 sm:h-5 text-foreground/70" />
                </div>
-               <div className="flex flex-col shrink-0">
-                  <span className="text-[13px] font-black tracking-[0.15em] uppercase leading-none text-foreground">Global Map</span>
-                  <span className="text-[9px] text-[#22C55E] tracking-[0.2em] font-mono mt-1.5 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
+               <div className="flex flex-col shrink-0 flex-1">
+                  <span className="text-xs sm:text-sm font-black tracking-widest uppercase leading-none text-foreground">Global Map</span>
+                  <span className="text-[9px] sm:text-[10px] text-green-500 tracking-widest font-mono mt-1 sm:mt-1.5 flex items-center gap-1.5 border border-green-500/20 bg-green-500/10 px-1.5 py-0.5 rounded-full w-fit">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-[pulse_1.5s_ease-in-out_infinite] shadow-[0_0_5px_#22c55e]"></span>
                     LIVE_FEED
                   </span>
                </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
-               
-               {/* View Filters */}
-               <div className="flex bg-background/50 p-1.5 rounded-xl border border-black/5 dark:border-white/5 text-[11px] sm:text-xs overflow-x-auto scrollbar-none flex-nowrap w-full sm:w-auto">
-                  <button onClick={() => setFilterMode('all')} className={cn("px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap outline-none", filterMode === 'all' ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10")}>ALL</button>
-                  <button onClick={() => setFilterMode('sos')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'sos' ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]" : "text-muted-foreground hover:text-red-400 hover:bg-black/5 dark:bg-white/5")}><AlertTriangle className="w-3.5 h-3.5"/> SOS</button>
-                  <button onClick={() => setFilterMode('user')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'user' ? "bg-[#0ea5e9] text-white shadow-[0_0_15px_rgba(14,165,233,0.4)]" : "text-muted-foreground hover:text-[#0ea5e9] hover:bg-black/5 dark:bg-white/5")}><User className="w-3.5 h-3.5"/> USERS</button>
-                  <button onClick={() => setFilterMode('nearby')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'nearby' ? "bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.4)]" : "text-muted-foreground hover:text-yellow-400 hover:bg-black/5 dark:bg-white/5")}><Radio className="w-3.5 h-3.5"/> NEARBY</button>
-               </div>
-               
-               {/* Technical Filters */}
-               <div className="flex items-center gap-3 shrink-0 ml-auto xl:ml-0 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
-                  <button onClick={() => setShowRelays(!showRelays)} className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl font-bold transition-all text-[11px] sm:text-xs border tracking-wide whitespace-nowrap", showRelays ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "bg-black/10 dark:bg-black/50 text-muted-foreground border-black/5 dark:border-white/5 hover:text-foreground")} title="Toggle Mesh Relays">
-                    <Radio className="w-3.5 h-3.5"/> 
-                    <span className="hidden sm:inline">MESH RELAYS</span>
-                    <span className="sm:hidden">RLY</span>
-                  </button>
-                  <select 
-                    value={connectionFilter}
-                    onChange={(e) => setConnectionFilter(e.target.value as any)}
-                    className="bg-black/10 dark:bg-black/50 text-muted-foreground border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 outline-none text-[10px] sm:text-[11px] font-bold tracking-[0.15em] uppercase cursor-pointer hover:text-foreground transition-all appearance-none text-center"
-                    title="Connection Filter"
-                  >
-                    <option value="all">ALL NODES</option>
-                    <option value="online">ONLINE</option>
-                    <option value="offline">OFFLINE</option>
-                  </select>
-               </div>
+            {/* Controls Row 1: Main Filters */}
+            <div className="bg-muted/30 p-1 sm:p-1.5 rounded-xl border border-border overflow-x-auto scrollbar-none w-full relative">
+                <div className="flex items-center gap-1 min-w-max">
+                   <button onClick={() => setFilterMode('all')} className={cn("px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg font-bold transition-all text-[10px] sm:text-xs outline-none flex items-center justify-center flex-1", filterMode === 'all' ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>ALL</button>
+                   <button onClick={() => setFilterMode('sos')} className={cn("px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg font-bold transition-all text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 outline-none flex-1", filterMode === 'sos' ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]" : "text-muted-foreground hover:text-red-500 hover:bg-muted")}><AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> SOS</button>
+                   <button onClick={() => setFilterMode('user')} className={cn("px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg font-bold transition-all text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 outline-none flex-1", filterMode === 'user' ? "bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]" : "text-muted-foreground hover:text-blue-500 hover:bg-muted")}><User className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> USERS</button>
+                   <button onClick={() => setFilterMode('nearby')} className={cn("px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg font-bold transition-all text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 outline-none flex-1", filterMode === 'nearby' ? "bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.4)]" : "text-muted-foreground hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-muted")}><Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> NEARBY</button>
+                </div>
+                {/* Scroll indicator shadow for mobile */}
+                <div className="absolute right-0 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-l from-muted/30 to-transparent pointer-events-none md:hidden rounded-r-xl" />
             </div>
-
-         </div>
+            
+            {/* Controls Row 2: Secondary Filters */}
+            <div className="flex items-center gap-2 sm:gap-3 w-full">
+               <button onClick={() => setShowRelays(!showRelays)} className={cn("flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl font-bold transition-all text-[10px] sm:text-xs border tracking-wider shadow-sm", showRelays ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30" : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground")} title="Toggle Mesh Relays">
+                 <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> 
+                 <span className="hidden sm:inline">MESH RELAYS</span>
+                 <span className="sm:hidden">RLY</span>
+               </button>
+               <select 
+                 value={connectionFilter}
+                 onChange={(e) => setConnectionFilter(e.target.value as any)}
+                 className="flex-1 bg-muted/50 text-foreground border border-border rounded-lg sm:rounded-xl px-2 sm:px-4 py-1.5 sm:py-2.5 outline-none text-[10px] sm:text-xs font-bold tracking-wider uppercase cursor-pointer hover:bg-muted transition-all appearance-none text-center shadow-sm"
+                 style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                 title="Connection Filter"
+               >
+                 <option value="all">ALL NODES</option>
+                 <option value="online">ONLINE</option>
+                 <option value="offline">OFFLINE</option>
+               </select>
+            </div>
+          </div>
       </div>
 
       <div className="flex-1 w-full min-h-0 relative z-[1]">
@@ -361,19 +361,19 @@ export const MapDisplay = React.memo(() => {
         </div>
 
         {/* Status Corner */}
-        <div className="absolute top-4 left-4 z-[9999] pointer-events-none flex flex-col gap-1">
+        <div className="absolute top-4 left-4 z-[9999] pointer-events-none flex flex-col gap-1.5">
           {isOfflineMode ? (
-            <div className="flex items-center gap-2 bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded border border-yellow-500/50">
-              <AlertTriangle className="w-3 h-3" />
-              <span className="text-[10px] font-bold tracking-widest">OFFLINE MODE (CACHE)</span>
+            <div className="flex items-center gap-2 bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 px-2.5 py-1.5 rounded-md border border-yellow-500/30 backdrop-blur-sm self-start">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span className="text-[10px] sm:text-xs font-bold tracking-widest">OFFLINE MODE</span>
             </div>
           ) : (
-             <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-[pulse_3s_ease-in-out_infinite]" />
-                <span className="text-[10px] font-mono text-foreground/90">LIVE_TRACKING.OS</span>
+             <div className="flex items-center gap-2 bg-background/60 backdrop-blur-sm px-2.5 py-1.5 rounded-md border border-border self-start">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_5px_#ef4444]" />
+                <span className="text-[10px] sm:text-xs font-mono font-bold text-foreground/90">LIVE_TRACKING.OS</span>
              </div>
           )}
-          <div className="font-mono text-[9px] text-muted-foreground/80 ml-4 mt-1">
+          <div className="font-mono text-[9px] sm:text-[10px] text-foreground bg-background/60 backdrop-blur-sm p-2 rounded-md border border-border self-start w-fit">
              MARKERS: {processedMarkers.length}<br/>
              LAT: {currentViewCenter[0].toFixed(5)}<br/>
              LNG: {currentViewCenter[1].toFixed(5)}
@@ -454,22 +454,22 @@ export const MapDisplay = React.memo(() => {
       </div>
       
       {/* Legend Footer */}
-      <div className="bg-transparent p-4 flex flex-wrap gap-4 items-center justify-center text-[10px] font-mono tracking-widest text-muted-foreground z-[10] relative shrink-0">
-         <div className="bg-card/90 dark:bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-black/10 dark:border-white/10 flex flex-wrap justify-center gap-6 shadow-2xl">
-          <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_10px_#ef4444]" /> 
+      <div className="bg-transparent p-2 sm:p-4 pb-4 sm:pb-6 flex items-center justify-center text-[9px] sm:text-xs font-mono tracking-widest text-muted-foreground z-[10] relative shrink-0">
+         <div className="bg-card/90 dark:bg-black/60 backdrop-blur-xl px-3 sm:px-6 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl border border-border flex flex-wrap justify-center items-center gap-x-3 gap-y-2 sm:gap-8 shadow-[0_4px_20px_rgb(0,0,0,0.12)] w-full max-w-2xl">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500 shadow-[0_0_10px_#ef4444]" /> 
             <span className="text-foreground font-bold">EMERGENCY</span>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_10px_#0ea5e9]" /> 
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6]" /> 
             <span className="text-foreground font-bold">USER</span>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#a855f7] shadow-[0_0_10px_#a855f7]" /> 
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-purple-500 shadow-[0_0_10px_#a855f7]" /> 
             <span className="text-foreground font-bold">MESH RELAY</span>
           </div>
-          <div className="flex items-center gap-2.5 opacity-60">
-            <div className="w-2.5 h-2.5 rounded-full border border-white/30 bg-[#3f3f46]" /> 
+          <div className="flex items-center gap-1.5 sm:gap-2 opacity-60">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full border border-muted-foreground bg-muted" /> 
             <span className="text-muted-foreground font-bold">OFFLINE</span>
           </div>
         </div>

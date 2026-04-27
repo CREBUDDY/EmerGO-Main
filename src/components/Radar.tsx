@@ -176,10 +176,32 @@ export const Radar = React.memo(() => {
 
   return (
     <div className="relative w-full aspect-square bg-card/90 dark:bg-black/60 text-muted-foreground border border-black/10 dark:border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md">
-      <div className="absolute top-5 left-5 z-20 text-left bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm pointer-events-none">
-        <span className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] uppercase leading-none block mb-1">NEARBY NODES</span>
-        <div className="text-foreground font-mono text-xl leading-none flex items-baseline gap-1">
-          {nodes.length} <span className="text-[10px] text-[#22C55E]">DETECTED</span>
+      <div className="absolute top-5 left-5 z-20 flex flex-col gap-2">
+        <div className="text-left bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm pointer-events-none">
+          <span className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] uppercase leading-none block mb-1">NEARBY NODES</span>
+          <div className="text-foreground font-mono text-xl leading-none flex items-baseline gap-1">
+            {nodes.length} <span className="text-[10px] text-[#22C55E]">DETECTED</span>
+          </div>
+        </div>
+
+        <div className="bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">Range</span>
+            <span className="text-[10px] font-mono text-foreground font-bold">{maxRadarRangeKm} km</span>
+          </div>
+          <input 
+            type="range"
+            min="1"
+            max="100"
+            step="1"
+            value={maxRadarRangeKm}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              setMaxRadarRangeKm(val);
+              window.dispatchEvent(new CustomEvent('RADAR_RANGE_CHANGED', { detail: val }));
+            }}
+            className="w-full h-1 bg-muted dark:bg-muted/50 rounded-lg appearance-none cursor-pointer accent-[#22C55E] focus:outline-none"
+          />
         </div>
       </div>
 

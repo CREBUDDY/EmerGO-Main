@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useVoiceStressAnalysis } from './useVoiceStressAnalysis';
+import { useOfflineVoiceCommands } from './useOfflineVoiceCommands';
 
 export type RiskScore = {
   dropScore: Int;        // 0-10
@@ -21,6 +22,28 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 50) => {
     orientationScore: 0,
     voiceScore: 0
   });
+
+  const maxScores = useRef<RiskScore>({
+    dropScore: 0,
+    accelerationScore: 0,
+    inactivityScore: 0,
+    orientationScore: 0,
+    voiceScore: 0
+  });
+
+  // Call the new offline voice commands hook
+  const handleVoiceSOS = useCallback(() => {
+     let currentScores = { ...maxScores.current };
+     currentScores.voiceScore = 60;
+     currentScores.dropScore = 10;
+     currentScores.accelerationScore = 10;
+     currentScores.inactivityScore = 10;
+     currentScores.orientationScore = 10;
+     maxScores.current = currentScores;
+     setScores(currentScores);
+  }, []);
+
+  useOfflineVoiceCommands(enabled, handleVoiceSOS);
 
   const [triggerStatus, setTriggerStatus] = useState<"Monitoring..." | "Triggering SOS in 5s..." | "SOS TRIGGERED">("Monitoring...");
   const lastTriggerTime = useRef<number>(0);
@@ -53,14 +76,6 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 50) => {
     uprightTime: 0
   });
 
-  const maxScores = useRef<RiskScore>({
-    dropScore: 0,
-    accelerationScore: 0,
-    inactivityScore: 0,
-    orientationScore: 0,
-    voiceScore: 0
-  });
-
   useEffect(() => {
     if (!enabled) {
       setScores({
@@ -81,67 +96,9 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 50) => {
       return;
     }
 
-    // --- VOICE ANALYSIS & COMMANDS (Web Speech API) ---
-    const KEYWORDS = ["sos", "help me", "emergency", "i need help"];
-
-    let recognition: any = null;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-      
-      recognition.onresult = (event: any) => {
-        let text = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          text += event.results[i][0].transcript + " ";
-        }
-        text = text.toLowerCase();
-        
-        const shouldTriggerSOS = KEYWORDS.some((keyword) => text.includes(keyword));
-
-        if (shouldTriggerSOS) {
-           let currentScores = { ...maxScores.current };
-           // Instantly max out all scores to force a trigger (Total = 100)
-           currentScores.voiceScore = 60;
-           currentScores.dropScore = 10;
-           currentScores.accelerationScore = 10;
-           currentScores.inactivityScore = 10;
-           currentScores.orientationScore = 10;
-           
-           maxScores.current = currentScores;
-           setScores(currentScores);
-        } else {
-           // Basic stress text detection
-           let matchCount = 0;
-           const words = text.split(/\s+/).filter(w => w.length > 0);
-           const stressWords = ["help", "stop", "please", "aah", "danger"];
-           words.forEach(w => {
-              if (stressWords.includes(w)) matchCount++;
-           });
-           
-           if (matchCount > 0) {
-              let currentScores = { ...maxScores.current };
-              const vScore = Math.min(60, currentScores.voiceScore + (matchCount * 10));
-              if (vScore > currentScores.voiceScore) {
-                 currentScores.voiceScore = vScore;
-                 maxScores.current = currentScores;
-                 setScores(currentScores);
-              }
-           }
-        }
-      };
-      recognition.onend = () => {
-        if (enabled) {
-          try { recognition.start(); } catch (e) {}
-        }
-      };
-      recognition.onerror = () => {};
-      try { recognition.start(); } catch (e) {}
-    }
-
+    // --- SENSOR ANALYSIS ---
     const handleMotion = (event: DeviceMotionEvent) => {
+
       const now = Date.now();
       const accel = event.accelerationIncludingGravity;
 
@@ -274,11 +231,6 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 50) => {
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
       clearInterval(decayInterval);
-      
-      if (recognition) {
-        recognition.onend = null;
-        recognition.stop();
-      }
     };
   }, [enabled]);
 

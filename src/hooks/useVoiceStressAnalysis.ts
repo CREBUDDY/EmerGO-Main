@@ -24,6 +24,14 @@ export const useVoiceStressAnalysis = (enabled: boolean = true) => {
 
 
   useEffect(() => {
+    if (!enabled) {
+      setIsAnalyzing(false);
+      setStressLevel(0);
+      setIsShouting(false);
+      return;
+    }
+
+    let isMounted = true;
     let audioCtx: AudioContext;
     let analyser: AnalyserNode;
     let stream: MediaStream;
@@ -31,7 +39,12 @@ export const useVoiceStressAnalysis = (enabled: boolean = true) => {
 
     const startAudio = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        if (!isMounted) {
+          audioStream.getTracks().forEach(t => t.stop());
+          return;
+        }
+        stream = audioStream;
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 256;
@@ -41,6 +54,7 @@ export const useVoiceStressAnalysis = (enabled: boolean = true) => {
         setIsAnalyzing(true);
 
         poller = setInterval(() => {
+          if (!isMounted) return;
           analyser.getByteFrequencyData(dataArray);
           let sum = 0;
           for(let i=0; i<dataArray.length;i++) sum+=dataArray[i];
@@ -67,15 +81,16 @@ export const useVoiceStressAnalysis = (enabled: boolean = true) => {
     startAudio();
 
     return () => {
+       isMounted = false;
        clearInterval(poller);
        if (stream) {
          stream.getTracks().forEach(t => t.stop());
        }
-       if (audioCtx) {
-         audioCtx.close();
+       if (audioCtx && audioCtx.state !== 'closed') {
+         audioCtx.close().catch(() => {});
        }
     };
-  }, [context]);
+  }, [context, enabled]);
 
   return { isAnalyzing, stressLevel, isShouting, context };
 };

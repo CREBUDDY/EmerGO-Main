@@ -11,6 +11,7 @@ export interface NotificationItem {
   read: boolean;
   latitude?: number;
   longitude?: number;
+  isGlobalSOS?: boolean;
 }
 
 export const useNotifications = () => {
@@ -87,14 +88,18 @@ export const useNotifications = () => {
         
         return {
           id: d.id,
+          userId: data.userId,
           type: 'SOS_ALERT' as const,
           message: `Someone needs help! ${data.transcript || 'Emergency triggered.'}`,
           timestamp: evTime,
           read: false, 
           latitude: data.latitude,
-          longitude: data.longitude
+          longitude: data.longitude,
+          isGlobalSOS: true
         };
-      }).filter(req => (now - req.timestamp) < MAX_AGE_MS);
+      })
+      .filter(req => (now - req.timestamp) < MAX_AGE_MS)
+      .filter(req => req.userId !== auth.currentUser?.uid);
 
       // check local storage to figure out read status since SOS events are global
       const readStr = localStorage.getItem('read_sos_notifications');
@@ -124,7 +129,7 @@ export const useNotifications = () => {
     const notif = notifications.find(n => n.id === id);
     if (!notif) return;
 
-    if (notif.type === 'SOS_ALERT' && !notif.userId) {
+    if (notif.isGlobalSOS) {
        // it's a global SOS from our mapped set
        const readStr = localStorage.getItem('read_sos_notifications');
        const readIds = readStr ? JSON.parse(readStr) : [];
@@ -148,7 +153,7 @@ export const useNotifications = () => {
     const readIds = readStr ? JSON.parse(readStr) : [];
     
     for (const notif of unreadNotifs) {
-      if (notif.type === 'SOS_ALERT' && !notif.userId) {
+      if (notif.isGlobalSOS) {
          if (!readIds.includes(notif.id)) readIds.push(notif.id);
       } else {
         await markAsRead(notif.id);
@@ -163,7 +168,7 @@ export const useNotifications = () => {
     const notif = notifications.find(n => n.id === id);
     if (!notif) return;
 
-    if (notif.type === 'SOS_ALERT' && !notif.userId) {
+    if (notif.isGlobalSOS) {
       // It's a mapped SOS. Hide it.
       const dismissedStr = localStorage.getItem('dismissed_notifications');
       const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
