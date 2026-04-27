@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { Compass } from 'lucide-react';
 
 export const LiveCompass = ({ className }: { className?: string }) => {
   const [heading, setHeading] = useState<number | null>(null);
@@ -28,16 +27,16 @@ export const LiveCompass = ({ className }: { className?: string }) => {
     };
 
     if ('ondeviceorientationabsolute' in window) {
-       window.addEventListener('deviceorientationabsolute', handleAbsolute as any);
+       (window as any).addEventListener('deviceorientationabsolute', handleAbsolute as any);
     } else {
-       window.addEventListener('deviceorientation', handleOrientation as any);
+       (window as any).addEventListener('deviceorientation', handleOrientation as any);
     }
 
     return () => {
        if ('ondeviceorientationabsolute' in window) {
-           window.removeEventListener('deviceorientationabsolute', handleAbsolute as any);
+           (window as any).removeEventListener('deviceorientationabsolute', handleAbsolute as any);
        } else {
-           window.removeEventListener('deviceorientation', handleOrientation as any);
+           (window as any).removeEventListener('deviceorientation', handleOrientation as any);
        }
     };
   }, []);
@@ -58,13 +57,13 @@ export const LiveCompass = ({ className }: { className?: string }) => {
     <div 
       onClick={requestPermission}
       className={cn(
-        "w-12 h-12 rounded-full bg-[#1A1C20]/90 backdrop-blur border border-[#2A2C32] flex items-center justify-center relative shadow-lg cursor-pointer flex-shrink-0 z-[10]",
+        "w-12 h-12 rounded-full bg-card/90 backdrop-blur border border-border flex items-center justify-center relative shadow-lg cursor-pointer flex-shrink-0 z-[10]",
         className
       )}
       title="Live Compass - Click to enable sensors on iOS"
     >
       {/* Inner ring */}
-      <div className="absolute inset-1 rounded-full border border-white/5" />
+      <div className="absolute inset-1 rounded-full border border-black/5 dark:border-white/5" />
       
       <motion.div 
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"

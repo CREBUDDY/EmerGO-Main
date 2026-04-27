@@ -99,7 +99,7 @@ export const PermissionsModal: React.FC = () => {
         setOpen(newOpen);
     }}>
       <DialogContent 
-        className="bg-[#151619] text-white border-[#2A2C32] sm:max-w-[450px] hardware-card"
+        className="bg-card/90 text-foreground border-border sm:max-w-[450px] hardware-card"
         showCloseButton={false}
       >
         <DialogHeader>
@@ -107,7 +107,7 @@ export const PermissionsModal: React.FC = () => {
             <AlertTriangle className="w-5 h-5 text-red-500" />
             System Permissions Required
           </DialogTitle>
-          <DialogDescription className="text-[#8E9299] text-xs">
+          <DialogDescription className="text-muted-foreground text-xs">
             Auto SOS requires explicit access to your device's hardware to guarantee 
             reliable emergency dispatching and offline fallbacks.
           </DialogDescription>
@@ -115,15 +115,15 @@ export const PermissionsModal: React.FC = () => {
 
         <div className="space-y-4 py-4">
           {/* Location Permission */}
-          <div className="bg-[#0A0A0B] border border-[#2A2C32] rounded-lg p-4 flex flex-col gap-3">
+          <div className="bg-background border border-border rounded-lg p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className={cn("p-2 rounded mt-0.5", locStatus === 'granted' ? "bg-green-500/20 text-green-500" : "bg-[#2A2C32] text-gray-400")}>
+                <div className={cn("p-2 rounded mt-0.5", locStatus === 'granted' ? "bg-green-500/20 text-green-500" : "bg-muted dark:bg-muted/80 text-gray-400")}>
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold tracking-tight text-white uppercase">Location Services</h4>
-                  <p className="text-[11px] text-[#8E9299] leading-relaxed">
+                  <h4 className="text-sm font-bold tracking-tight text-foreground uppercase">Location Services</h4>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Necessary to accurately fetch and broadcast your absolute GPS 
                     coordinates to emergency responders and mesh nodes during an SOS.
                   </p>
@@ -140,7 +140,7 @@ export const PermissionsModal: React.FC = () => {
                 <Button 
                   onClick={requestLocation} 
                   disabled={locStatus === 'denied'}
-                  className="h-7 text-[10px] bg-white text-black hover:bg-gray-200 uppercase font-bold tracking-widest"
+                  className="h-7 text-[10px] bg-foreground text-background hover:bg-foreground/80 uppercase font-bold tracking-widest"
                 >
                   Grant Access
                 </Button>
@@ -150,15 +150,15 @@ export const PermissionsModal: React.FC = () => {
           </div>
 
           {/* Microphone Permission */}
-          <div className="bg-[#0A0A0B] border border-[#2A2C32] rounded-lg p-4 flex flex-col gap-3">
+          <div className="bg-background border border-border rounded-lg p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className={cn("p-2 rounded mt-0.5", micStatus === 'granted' ? "bg-green-500/20 text-green-500" : "bg-[#2A2C32] text-gray-400")}>
+                <div className={cn("p-2 rounded mt-0.5", micStatus === 'granted' ? "bg-green-500/20 text-green-500" : "bg-muted dark:bg-muted/80 text-gray-400")}>
                   <Mic className="w-4 h-4" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold tracking-tight text-white uppercase">Microphone Access</h4>
-                  <p className="text-[11px] text-[#8E9299] leading-relaxed">
+                  <h4 className="text-sm font-bold tracking-tight text-foreground uppercase">Microphone Access</h4>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Required for the AI voice command SOS engine. Allows hands-free 
                     triggering and records emergency audio to attach to your signal.
                   </p>
@@ -175,7 +175,7 @@ export const PermissionsModal: React.FC = () => {
                 <Button 
                   onClick={requestMicrophone} 
                   disabled={micStatus === 'denied'}
-                  className="h-7 text-[10px] bg-white text-black hover:bg-gray-200 uppercase font-bold tracking-widest"
+                  className="h-7 text-[10px] bg-foreground text-background hover:bg-foreground/80 uppercase font-bold tracking-widest"
                 >
                   Grant Access
                 </Button>

@@ -22,7 +22,6 @@ const DEFAULT_CENTER_LNG = 77.2090;
 
 export const Radar = React.memo(() => {
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [angle, setAngle] = useState(0);
   const [maxRadarRangeKm, setMaxRadarRangeKm] = useState(10);
   const { isOnline } = useAppMode();
 
@@ -131,7 +130,7 @@ export const Radar = React.memo(() => {
         .map(doc => ({ id: doc.id, ...doc.data() as any }))
         .filter(data => data.latitude && data.longitude)
         .map(data => {
-          const { x, y, distance, isOutOfRange } = mapCoordsToRadar(data.latitude, data.longitude, centerLat, centerLng);
+          const { x, y, distance } = mapCoordsToRadar(data.latitude, data.longitude, centerLat, centerLng);
           return {
             id: data.id,
             x,
@@ -146,14 +145,9 @@ export const Radar = React.memo(() => {
       setNodes([...currentNodes, ...currentSOS]);
     });
 
-    const interval = setInterval(() => {
-      setAngle((prev) => (prev + 10) % 360);
-    }, 100);
-
     return () => {
       unsubscribeNodes();
       unsubscribeSos();
-      clearInterval(interval);
     };
   }, [isOnline, maxRadarRangeKm]);
 
@@ -171,56 +165,76 @@ export const Radar = React.memo(() => {
 
   const getStatusIcon = (status: Node['status']) => {
     switch (status) {
-      case 'low-battery': return <BatteryWarning className="w-2.5 h-2.5 text-white" />;
-      case 'relaying': return <Radio className="w-2.5 h-2.5 text-white" />;
-      case 'emergency': return <AlertTriangle className="w-2.5 h-2.5 text-white" />;
+      case 'low-battery': return <BatteryWarning className="w-2.5 h-2.5 text-foreground" />;
+      case 'relaying': return <Radio className="w-2.5 h-2.5 text-foreground" />;
+      case 'emergency': return <AlertTriangle className="w-2.5 h-2.5 text-foreground" />;
       case 'offline':
-      case 'out-of-range': return <WifiOff className="w-2.5 h-2.5 text-white" />;
+      case 'out-of-range': return <WifiOff className="w-2.5 h-2.5 text-foreground" />;
       default: return null;
     }
   };
 
   return (
-    <div className="relative w-full aspect-square hardware-card p-4 flex flex-col items-center justify-center">
-      <div className="absolute top-4 left-4 z-10 text-left">
-        <span className="status-label">Nearby Nodes</span>
-        <div className="data-value">{nodes.length} Detected</div>
+    <div className="relative w-full aspect-square bg-card/90 dark:bg-black/60 text-muted-foreground border border-black/10 dark:border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md">
+      <div className="absolute top-5 left-5 z-20 text-left bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm pointer-events-none">
+        <span className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] uppercase leading-none block mb-1">NEARBY NODES</span>
+        <div className="text-foreground font-mono text-xl leading-none flex items-baseline gap-1">
+          {nodes.length} <span className="text-[10px] text-[#22C55E]">DETECTED</span>
+        </div>
       </div>
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-5 right-5 z-20">
         <LiveCompass />
       </div>
 
-      <div className="relative w-full h-full border border-[#2A2C32] rounded-full flex items-center justify-center overflow-hidden">
+      <div className="relative w-full h-full rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-tr from-[#22C55E]/5 to-transparent border border-black/5 dark:border-white/5 shadow-[inset_0_0_40px_rgba(34,197,94,0.05)]">
         {/* Radar Rings */}
-        <div className="absolute w-3/4 h-3/4 border border-[#2A2C32] rounded-full" />
-        <div className="absolute w-1/2 h-1/2 border border-[#2A2C32] rounded-full" />
-        <div className="absolute w-1/4 h-1/4 border border-[#2A2C32] rounded-full" />
+        <div className="absolute w-[90%] h-[90%] border border-[#22C55E]/10 rounded-full" />
+        <div className="absolute w-[60%] h-[60%] border border-[#22C55E]/10 border-dashed rounded-full" />
+        <div className="absolute w-[30%] h-[30%] border border-[#22C55E]/10 rounded-full" />
         
+        {/* Center Glow */}
+        <div className="absolute w-full h-full bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.08)_0%,transparent_50%)] pointer-events-none" />
+
         {/* Crosshair */}
-        <div className="absolute w-full h-[1px] bg-[#2A2C32]" />
-        <div className="absolute h-full w-[1px] bg-[#2A2C32]" />
+        <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-[#22C55E]/10 to-transparent" />
+        <div className="absolute h-full w-[1px] bg-gradient-to-b from-transparent via-[#22C55E]/10 to-transparent" />
 
         {/* Direction Guides on Radar Edge */}
-        <div className="absolute w-full h-full flex flex-col justify-between items-center py-1.5 opacity-60 pointer-events-none text-[10px] font-bold font-mono tracking-widest text-[#8E9299]">
-          <span className="text-red-500/90 z-20">N</span>
-          <span className="z-20">S</span>
+        <div className="absolute inset-2 flex flex-col justify-between items-center opacity-80 pointer-events-none text-[10px] font-bold font-mono tracking-widest text-muted-foreground">
+          <span className="text-red-500 z-20 mt-1 drop-shadow-md">N</span>
+          <span className="z-20 mb-1">S</span>
         </div>
-        <div className="absolute w-full h-full flex justify-between items-center px-2 opacity-60 pointer-events-none text-[10px] font-bold font-mono tracking-widest text-[#8E9299]">
-          <span className="z-20">W</span>
-          <span className="z-20">E</span>
+        <div className="absolute inset-2 flex justify-between items-center opacity-80 pointer-events-none text-[10px] font-bold font-mono tracking-widest text-muted-foreground">
+          <span className="z-20 ml-1">W</span>
+          <span className="z-20 mr-1">E</span>
         </div>
 
         {/* Sweep */}
         <motion.div
-          className="absolute w-1/2 h-1/2 origin-bottom-right"
-          style={{
-            top: 0,
-            left: 0,
-            background: 'linear-gradient(45deg, rgba(255, 68, 68, 0.1) 0%, transparent 100%)',
-            rotate: angle,
-          }}
+           className="absolute w-full h-full rounded-full"
+           animate={{ rotate: 360 }}
+           transition={{ ease: "linear", duration: 4, repeat: Infinity }}
+           style={{
+             background: 'conic-gradient(from -90deg, rgba(34, 197, 94, 0) 0deg, rgba(34, 197, 94, 0) 260deg, rgba(34, 197, 94, 0.1) 320deg, rgba(34, 197, 94, 0.4) 360deg)',
+           }}
         />
+        
+        {/* Sweep Line */}
+        <motion.div
+          className="absolute w-1/2 h-[2px] left-1/2 top-1/2 origin-left bg-gradient-to-r from-[#22C55E] to-transparent shadow-[0_0_15px_#22C55E]"
+          animate={{ rotate: 360 }}
+          transition={{ ease: "linear", duration: 4, repeat: Infinity }}
+        />
+
+        {/* Center Node (User) */}
+        <div className="absolute z-20 w-3 h-3 rounded-full bg-[#22C55E] shadow-[0_0_15px_#22C55E] flex items-center justify-center">
+            <motion.div
+               className="absolute inset-0 rounded-full border border-[#22C55E]"
+               animate={{ scale: [1, 2.5], opacity: [1, 0] }}
+               transition={{ repeat: Infinity, duration: 2 }}
+            />
+        </div>
 
         {/* Nodes */}
         <AnimatePresence>
@@ -241,8 +255,8 @@ export const Radar = React.memo(() => {
                 getStatusColor(node.status)
               )}
               style={{
-                left: `${50 + node.x * 40}%`,
-                top: `${50 + node.y * 40}%`,
+                left: `${50 + node.x * 45}%`,
+                top: `${50 + node.y * 45}%`,
                 transform: 'translate(-50%, -50%)',
               }}
             >
@@ -274,40 +288,43 @@ export const Radar = React.memo(() => {
       </div>
       
       {/* Legend / Filters */}
-      <div className="absolute bottom-4 left-4 flex flex-col gap-1">
+      <div className="absolute bottom-5 left-5 flex flex-col gap-1.5 bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm z-20">
         <button 
           onClick={() => toggleFilter('active')}
-          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80 disabled:cursor-not-allowed", !activeFilters.active && "opacity-30")}
+          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80", !activeFilters.active && "opacity-30")}
         >
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="status-label text-[8px] uppercase">Active</span>
+          <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_5px_theme(colors.blue.500)]" />
+          <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">Active</span>
         </button>
         <button 
           onClick={() => toggleFilter('relaying')}
-          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80 disabled:cursor-not-allowed", !activeFilters.relaying && "opacity-30")}
+          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80", !activeFilters.relaying && "opacity-30")}
         >
-          <div className="w-2 h-2 rounded-full bg-purple-500" />
-          <span className="status-label text-[8px] uppercase">Relaying</span>
+          <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_5px_theme(colors.purple.500)]" />
+          <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">Relaying</span>
         </button>
         <button 
           onClick={() => toggleFilter('low-battery')}
-          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80 disabled:cursor-not-allowed", !activeFilters['low-battery'] && "opacity-30")}
+          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80", !activeFilters['low-battery'] && "opacity-30")}
         >
-          <div className="w-2 h-2 rounded-full bg-yellow-500" />
-          <span className="status-label text-[8px] uppercase">Low Bat</span>
+          <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_5px_theme(colors.yellow.500)]" />
+          <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">Low Bat</span>
         </button>
         <button 
           onClick={() => toggleFilter('offline')}
-          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80 disabled:cursor-not-allowed", !activeFilters.offline && "opacity-30")}
+          className={cn("flex items-center gap-2 transition-opacity hover:opacity-80", !activeFilters.offline && "opacity-30")}
         >
-          <div className="w-2 h-2 rounded-full bg-zinc-600 opacity-60" />
-          <span className="status-label text-[8px] uppercase">Offline</span>
+          <div className="w-2 h-2 rounded-full bg-zinc-600" />
+          <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">Offline</span>
         </button>
       </div>
 
-      <div className="absolute bottom-4 right-4 text-right">
-        <span className="status-label">Mesh Status</span>
-        <div className="data-value text-green-500">ENCRYPTED</div>
+      <div className="absolute bottom-5 right-5 text-right bg-background/60 p-2.5 rounded-lg border border-black/5 dark:border-white/5 backdrop-blur-sm pointer-events-none z-20">
+        <span className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] uppercase leading-none block mb-1">MESH STATUS</span>
+        <div className="text-[#22C55E] font-mono text-sm leading-none flex items-center gap-1.5 justify-end mt-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_5px_#22C55E]" />
+          ENCRYPTED
+        </div>
       </div>
     </div>
   );

@@ -32,16 +32,16 @@ export const NotificationDropdown = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="relative p-2 text-[#8E9299] hover:text-white transition-colors flex items-center justify-center cursor-pointer">
+      <DropdownMenuTrigger className="relative p-2 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer">
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
         )}
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className="w-[320px] bg-[#151619] border-[#2A2C32] text-white hardware-card p-0">
-        <div className="flex items-center justify-between p-3 border-b border-[#2A2C32]">
-          <h3 className="font-heading text-lg font-normal uppercase tracking-wide py-0 flex items-center gap-2 m-0 text-white">
+      <DropdownMenuContent align="end" className="w-[320px] bg-card border-border text-foreground hardware-card p-0">
+        <div className="flex items-center justify-between p-3 border-b border-border">
+          <h3 className="font-heading text-lg font-normal uppercase tracking-wide py-0 flex items-center gap-2 m-0 text-foreground">
             System Alerts
             {unreadCount > 0 && (
               <span className="bg-red-500/10 text-red-500 text-[10px] px-1.5 rounded-full font-mono">{unreadCount}</span>
@@ -50,7 +50,7 @@ export const NotificationDropdown = () => {
           {unreadCount > 0 && (
             <button 
               onClick={markAllAsRead}
-              className="text-[#8E9299] hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               title="Mark all as read"
             >
               <CheckSquare className="w-4 h-4" />
@@ -60,15 +60,15 @@ export const NotificationDropdown = () => {
         
         <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-[#8E9299] text-xs font-mono">No active alerts</div>
+            <div className="p-4 text-center text-muted-foreground text-xs font-mono">No active alerts</div>
           ) : (
             <div className="flex flex-col">
               {notifications.map((notif) => (
                 <div 
                   key={notif.id}
                   className={cn(
-                    "flex flex-col gap-2 p-3 border-b border-[#2A2C32] last:border-b-0 hover:bg-[#1A1C20] transition-colors relative group",
-                    !notif.read ? "bg-[#1A1C20]" : ""
+                    "flex flex-col gap-2 p-3 border-b border-border last:border-b-0 hover:bg-muted/50 dark:hover:bg-muted transition-colors relative group",
+                    !notif.read ? "bg-muted/20 dark:bg-muted/50" : ""
                   )}
                   onClick={() => !notif.read && markAsRead(notif.id)}
                 >
@@ -79,7 +79,7 @@ export const NotificationDropdown = () => {
                     <div className="flex-1 flex flex-col min-w-0 pr-6">
                       <span className={cn(
                         "text-xs leading-relaxed break-words",
-                        !notif.read ? "font-bold text-white" : "text-[#8E9299]"
+                        !notif.read ? "font-bold text-foreground" : "text-muted-foreground"
                       )}>
                         {notif.message}
                       </span>
@@ -96,7 +96,7 @@ export const NotificationDropdown = () => {
                         target="_blank" 
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#2A2C32] hover:bg-white hover:text-black hover:border-white transition-colors border border-[#3A3C42] text-[9px] font-bold uppercase rounded-md w-fit"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-muted dark:bg-muted/80 hover:bg-foreground hover:text-primary-foreground hover:border-primary shrink-0 transition-colors border border-border text-[9px] font-bold uppercase rounded-md w-fit"
                       >
                         <Navigation className="w-3 h-3" />
                         Trace Location

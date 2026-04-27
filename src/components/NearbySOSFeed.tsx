@@ -41,7 +41,7 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
       </div>
       <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
         {nearbyRequests.length === 0 ? (
-          <div className="text-xs text-[#8E9299] font-mono text-center mt-8">NO NEARBY EMERGENCIES</div>
+          <div className="text-xs text-muted-foreground font-mono text-center mt-8">NO NEARBY EMERGENCIES</div>
         ) : (
           nearbyRequests.map(req => (
             <div key={req.id} className="bg-red-500/10 border border-red-500/30 rounded p-3 flex flex-col gap-2">
@@ -58,7 +58,7 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
                 </div>
               </div>
               
-              <p className="text-xs text-white/90 font-mono line-clamp-2">
+              <p className="text-xs text-foreground/90 font-mono line-clamp-2">
                 {req.transcript || "Help required at this location."}
               </p>
 
@@ -68,7 +68,7 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
                     href={`https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat || ''},${userLocation?.lng || ''}&destination=${req.latitude},${req.longitude}`}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-100 hover:text-white transition-colors text-[10px] font-bold uppercase rounded-md border border-red-500/30 w-fit"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-100 hover:text-foreground transition-colors text-[10px] font-bold uppercase rounded-md border border-red-500/30 w-fit"
                   >
                     <Navigation className="w-3 h-3" />
                     Trace Location
@@ -91,7 +91,7 @@ export const NearbySOSFeed = React.memo(({ userLocation }: { userLocation: { lat
                   <Button 
                     onClick={() => handleAcknowledge(req.id)}
                     size="sm" 
-                    className="h-6 px-3 text-[10px] uppercase font-bold tracking-wider bg-red-600 hover:bg-red-500 text-white border border-red-400/50"
+                    className="h-6 px-3 text-[10px] uppercase font-bold tracking-wider bg-red-600 hover:bg-red-500 text-foreground border border-red-400/50"
                   >
                     ACKNOWLEDGE
                   </Button>

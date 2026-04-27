@@ -53,10 +53,10 @@ export const SOSHistory = React.memo(() => {
       </div>
       <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
         {displayEvents.length === 0 ? (
-          <div className="text-xs text-[#8E9299] font-mono text-center mt-8">NO SOS RECORDS FOUND</div>
+          <div className="text-xs text-muted-foreground font-mono text-center mt-8">NO SOS RECORDS FOUND</div>
         ) : (
           displayEvents.map(req => (
-            <div key={req.id} className="bg-[#0A0A0B] border border-[#2A2C32] rounded p-3 flex items-center justify-between">
+            <div key={req.id} className="bg-background border border-border rounded p-3 flex items-center justify-between">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2">
                   {req.isResolved ? (
@@ -64,10 +64,10 @@ export const SOSHistory = React.memo(() => {
                   ) : (
                     <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
                   )}
-                  <span className="text-xs font-bold text-white">
+                  <span className="text-xs font-bold text-foreground">
                     {req.isResolved ? 'RESOLVED' : 'ACTIVE SOS'}
                   </span>
-                  <span className="text-[8px] text-[#8E9299]/60 font-mono">
+                  <span className="text-[8px] text-muted-foreground/60 font-mono">
                     {new Date(req.timestamp).toLocaleString()}
                   </span>
                   {!isAdmin && req.status && (
@@ -83,7 +83,7 @@ export const SOSHistory = React.memo(() => {
                   )}
                 </div>
                 <div className="flex gap-4">
-                  <span className="text-[8px] text-[#8E9299]/60 font-mono truncate">
+                  <span className="text-[8px] text-muted-foreground/60 font-mono truncate">
                     SENDER: {req.userId === auth.currentUser?.uid ? 'YOU' : req.userId}
                   </span>
                   <span className="text-[8px] text-purple-400 font-mono">
@@ -101,7 +101,7 @@ export const SOSHistory = React.memo(() => {
                   {(!isAdmin || req.userId === auth.currentUser?.uid) && (
                     <button 
                       onClick={() => deleteSOS(req.id)}
-                      className="p-1.5 bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-white transition-colors"
+                      className="p-1.5 bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-foreground transition-colors"
                       title="Delete SOS Record"
                     >
                       <Trash2 className="w-4 h-4" />

@@ -9,7 +9,7 @@ export interface SOSEvent {
   audioDataUrl?: string; // Stored in Firebase
   transcript: string;
   type: 'voice' | 'silent' | 'text';
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'ACKNOWLEDGED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'ACKNOWLEDGED' | 'FAILED' | 'OFFLINE_QUEUED';
   retryCount: number;
   isResolved?: boolean;
   emergencyContacts?: string[];

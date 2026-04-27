@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '@/src/lib/firebase';
-import { getDeviceId } from '@/src/lib/device';
 import { SOSEvent } from '@/src/types/sos';
 
 import { calculateDistance } from '@/src/lib/geo';

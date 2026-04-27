@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
-import { db as firestore, auth, handleFirestoreError, OperationType } from '@/src/lib/firebase';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db as firestore, auth } from '@/src/lib/firebase';
 import { cn } from '@/lib/utils';
-import { Map, Globe, Layers, AlertTriangle, User, ExternalLink, LocateFixed, EyeOff, Radio } from 'lucide-react';
+import { Map, Globe, AlertTriangle, User, ExternalLink, LocateFixed, Radio } from 'lucide-react';
 import { calculateDistance } from '@/src/lib/geo';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,24 +20,50 @@ L.Icon.Default.mergeOptions({
 });
 
 // Custom Icons
-const createCustomIcon = (color: string, size: number = 12, isOffline: boolean = false, isSos: boolean = false) => {
-  const pulseAnim = isSos ? 'animation: pulse 2s infinite;' : '';
-  const opacity = isOffline ? 'opacity: 0.5;' : '';
-  const shadow = isSos ? `box-shadow: 0 0 10px ${color};` : `box-shadow: 0 0 4px rgba(0,0,0,0.5);`;
+const createCustomIcon = (color: string, size: number = 14, isOffline: boolean = false, isSos: boolean = false) => {
+  const opacityClass = isOffline ? 'opacity-40' : 'opacity-100';
+  const glow = isOffline ? 'none' : `0 0 15px ${color}, inset 0 0 8px rgba(0,0,0,0.6)`;
+  const sosCoreScale = 0.4;
+  
   return L.divIcon({
-    className: 'custom-leaflet-marker',
-    html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 2px solid white; ${shadow} ${opacity} ${pulseAnim} display: flex; align-items: center; justify-content: center;">${isSos ? '<div style="width: 8px; height: 8px; background-color: white; border-radius: 50%;"></div>' : ''}</div>`,
-    iconSize: [size, size],
-    iconAnchor: [size/2, size/2],
+    className: 'bg-transparent border-0',
+    html: `
+      <div class="relative flex items-center justify-center ${opacityClass}" style="width: ${size*2.5}px; height: ${size*2.5}px;">
+        <!-- Radar Ping -->
+        ${isSos ? `<div class="absolute inset-0 rounded-full animate-ping" style="background-color: ${color}; opacity: 0.4;"></div>` : ''}
+        
+        <!-- Rotating dashed ring -->
+        <div class="absolute rounded-full border border-dashed animate-[spin_6s_linear_infinite]" style="width: ${size*1.8}px; height: ${size*1.8}px; border-color: ${color}; opacity: ${isOffline ? 0.3 : 0.6};"></div>
+        
+        <!-- Core Node -->
+        <div class="absolute rounded-full flex items-center justify-center" style="width: ${size}px; height: ${size}px; background-color: ${color}; border: ${isOffline ? '1px' : '2px'} solid rgba(255,255,255,${isOffline ? 0.5 : 0.9}); box-shadow: ${glow}; z-index: 10;">
+            ${isSos ? `<div class="bg-foreground rounded-full animate-[pulse_1s_ease-in-out_infinite]" style="width: ${size * sosCoreScale}px; height: ${size * sosCoreScale}px; box-shadow: 0 0 5px white;"></div>` : ''}
+        </div>
+      </div>
+    `,
+    iconSize: [size*2.5, size*2.5],
+    iconAnchor: [size*1.25, size*1.25],
   });
 };
 
-const userIcon = createCustomIcon('#3b82f6', 16);
-const nodeIcon = createCustomIcon('#3b82f6', 14);
-const offlineNodeIcon = createCustomIcon('#8E9299', 14, true);
-const relayIcon = createCustomIcon('#a855f7', 16); // Purple for relay
-const sosIcon = createCustomIcon('#ef4444', 24, false, true);
-const offlineSosIcon = createCustomIcon('#ef4444', 24, true, true);
+const createClusterCustomIcon = function (cluster: any) {
+  return L.divIcon({
+    html: `<div class="relative flex items-center justify-center w-12 h-12">
+             <div class="absolute inset-0 bg-card dark:bg-black/80 backdrop-blur-xl rounded-full border border-black/20 dark:border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.6)]"></div>
+             <div class="absolute inset-1 rounded-full border border-dashed border-cyan-500/30 animate-[spin_8s_linear_infinite]"></div>
+             <span class="relative text-foreground font-mono text-[13px] font-bold z-10">${cluster.getChildCount()}</span>
+           </div>`,
+    className: 'bg-transparent border-0',
+    iconSize: L.point(48, 48, true),
+  });
+};
+
+const userIcon = createCustomIcon('#0ea5e9', 14); // Cyan-blue
+const nodeIcon = createCustomIcon('#0ea5e9', 12);
+const offlineNodeIcon = createCustomIcon('#52525b', 12, true); // Zinc
+const relayIcon = createCustomIcon('#a855f7', 14); // Purple
+const sosIcon = createCustomIcon('#ef4444', 18, false, true); // Red
+const offlineSosIcon = createCustomIcon('#ef4444', 18, true, true);
 
 const DEFAULT_CENTER: [number, number] = [28.6139, 77.2090];
 const SOS_EXPIRY_MS = 15 * 60 * 1000; // 15 mins
@@ -82,6 +109,7 @@ const MapControls = ({ center, onMove, userLocation }: { center: [number, number
 };
 
 export const MapDisplay = React.memo(() => {
+  const { theme, resolvedTheme } = useTheme();
   const [nodes, setNodes] = useState<MapNode[]>([]);
   const [sosRequests, setSosRequests] = useState<MapNode[]>([]);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -104,11 +132,6 @@ export const MapDisplay = React.memo(() => {
     window.addEventListener('RADAR_RANGE_CHANGED', handleRangeSync);
     return () => window.removeEventListener('RADAR_RANGE_CHANGED', handleRangeSync);
   }, []);
-
-  const handleRangeChange = (val: number) => {
-    setMaxDistanceKm(val);
-    window.dispatchEvent(new CustomEvent('RADAR_RANGE_CHANGED', { detail: val }));
-  };
 
   useEffect(() => {
     const handleOnline = () => setIsOfflineMode(false);
@@ -150,7 +173,7 @@ export const MapDisplay = React.memo(() => {
           type: data.isRelay ? 'RELAY' : 'USER',
           status: data.isOnline === false ? 'OFFLINE' : 'ACTIVE',
           timestamp: data.lastUpdated || Date.now()
-        };
+        } as MapNode;
       }).filter(n => n.id !== auth.currentUser?.uid && n.latitude && n.longitude);
       setNodes(detectedNodes);
     });
@@ -168,7 +191,7 @@ export const MapDisplay = React.memo(() => {
           status: 'ACTIVE',
           timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp || Date.now()),
           message: data.message || data.transcript
-        };
+        } as MapNode;
       }).filter(n => n.latitude && n.longitude);
       setSosRequests(requests);
     });
@@ -239,36 +262,86 @@ export const MapDisplay = React.memo(() => {
 
   return (
     <div className="hardware-card w-full h-full relative overflow-hidden group flex flex-col">
+      <style>{`
+        .leaflet-popup-content-wrapper {
+          background: #0A0A0B !important;
+          border: 1px solid #2A2C32 !important;
+          color: white !important;
+          border-radius: 8px !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
+          padding: 0 !important;
+        }
+        .leaflet-popup-content {
+          margin: 0 !important;
+        }
+        .leaflet-popup-tip {
+          background: #0A0A0B !important;
+          border: 1px solid #2A2C32 !important;
+          border-top: none !important;
+          border-left: none !important;
+        }
+        .leaflet-popup-close-button {
+          color: #8E9299 !important;
+          padding: 4px !important;
+        }
+        .leaflet-popup-close-button:hover {
+          color: white !important;
+          background: transparent !important;
+        }
+        .leaflet-container {
+          background: #0A0A0B;
+        }
+      `}</style>
       {/* Top Filter Bar */}
-      <div className="bg-[#111214] border-b border-[#2A2C32] p-3 flex flex-wrap gap-4 items-center justify-between z-[10] relative shrink-0">
-        <div className="flex gap-2 text-xs">
-           <button onClick={() => setFilterMode('all')} className={cn("px-3 py-1.5 rounded font-bold transition-colors", filterMode === 'all' ? "bg-white text-black" : "bg-[#1A1C20] text-gray-400 hover:text-white")}>ALL</button>
-           <button onClick={() => setFilterMode('sos')} className={cn("px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1", filterMode === 'sos' ? "bg-red-500 text-white" : "bg-[#1A1C20] text-gray-400 hover:text-red-400")}><AlertTriangle className="w-3.5 h-3.5"/> SOS</button>
-           <button onClick={() => setFilterMode('user')} className={cn("px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1", filterMode === 'user' ? "bg-blue-500 text-white" : "bg-[#1A1C20] text-gray-400 hover:text-blue-400")}><User className="w-3.5 h-3.5"/> USERS</button>
-           <button onClick={() => setFilterMode('nearby')} className={cn("px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1", filterMode === 'nearby' ? "bg-yellow-500 text-black" : "bg-[#1A1C20] text-gray-400 hover:text-yellow-400")}><Radio className="w-3.5 h-3.5"/> NEARBY</button>
-        </div>
+      <div className="bg-transparent p-4 z-[10] relative shrink-0">
+         <div className="bg-card/90 dark:bg-black/60 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-2xl p-3 shadow-2xl flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
+            
+            {/* Map Header */}
+            <div className="flex items-center gap-3 text-foreground shrink-0 px-2">
+               <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10 shrink-0 shadow-inner">
+                  <Map className="w-5 h-5 text-foreground/70" />
+               </div>
+               <div className="flex flex-col shrink-0">
+                  <span className="text-[13px] font-black tracking-[0.15em] uppercase leading-none text-foreground">Global Map</span>
+                  <span className="text-[9px] text-[#22C55E] tracking-[0.2em] font-mono mt-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
+                    LIVE_FEED
+                  </span>
+               </div>
+            </div>
 
-        <div className="flex items-center gap-4 text-xs font-mono">
-           <div className="flex items-center gap-2">
-             <span className="text-[#8E9299]">RADAR RANGE:</span>
-             <input type="range" min="1" max="50" value={maxDistanceKm} onChange={(e) => handleRangeChange(Number(e.target.value))} className="w-24 accent-red-500" />
-             <span className="text-white w-8">{maxDistanceKm}km</span>
-           </div>
-           
-           <div className="flex gap-3 items-center">
-             <button onClick={() => setShowRelays(!showRelays)} className={cn("flex items-center gap-1", showRelays ? "text-blue-400" : "text-[#5A5C62]")} title="Toggle Relays"><Radio className="w-4 h-4"/> RLY</button>
-             <select 
-               value={connectionFilter}
-               onChange={(e) => setConnectionFilter(e.target.value as any)}
-               className="bg-[#1A1C20] text-gray-300 border border-[#2A2C32] rounded px-2 py-1 outline-none text-[10px] font-bold tracking-widest uppercase cursor-pointer hover:border-gray-500 transition-colors h-[26px]"
-               title="Connection Filter"
-             >
-               <option value="all">ALL NODES</option>
-               <option value="online">ONLINE</option>
-               <option value="offline">OFFLINE</option>
-             </select>
-           </div>
-        </div>
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
+               
+               {/* View Filters */}
+               <div className="flex bg-background/50 p-1.5 rounded-xl border border-black/5 dark:border-white/5 text-[11px] sm:text-xs overflow-x-auto scrollbar-none flex-nowrap w-full sm:w-auto">
+                  <button onClick={() => setFilterMode('all')} className={cn("px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap outline-none", filterMode === 'all' ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10")}>ALL</button>
+                  <button onClick={() => setFilterMode('sos')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'sos' ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]" : "text-muted-foreground hover:text-red-400 hover:bg-black/5 dark:bg-white/5")}><AlertTriangle className="w-3.5 h-3.5"/> SOS</button>
+                  <button onClick={() => setFilterMode('user')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'user' ? "bg-[#0ea5e9] text-white shadow-[0_0_15px_rgba(14,165,233,0.4)]" : "text-muted-foreground hover:text-[#0ea5e9] hover:bg-black/5 dark:bg-white/5")}><User className="w-3.5 h-3.5"/> USERS</button>
+                  <button onClick={() => setFilterMode('nearby')} className={cn("px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-1.5 whitespace-nowrap outline-none", filterMode === 'nearby' ? "bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.4)]" : "text-muted-foreground hover:text-yellow-400 hover:bg-black/5 dark:bg-white/5")}><Radio className="w-3.5 h-3.5"/> NEARBY</button>
+               </div>
+               
+               {/* Technical Filters */}
+               <div className="flex items-center gap-3 shrink-0 ml-auto xl:ml-0 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
+                  <button onClick={() => setShowRelays(!showRelays)} className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl font-bold transition-all text-[11px] sm:text-xs border tracking-wide whitespace-nowrap", showRelays ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "bg-black/10 dark:bg-black/50 text-muted-foreground border-black/5 dark:border-white/5 hover:text-foreground")} title="Toggle Mesh Relays">
+                    <Radio className="w-3.5 h-3.5"/> 
+                    <span className="hidden sm:inline">MESH RELAYS</span>
+                    <span className="sm:hidden">RLY</span>
+                  </button>
+                  <select 
+                    value={connectionFilter}
+                    onChange={(e) => setConnectionFilter(e.target.value as any)}
+                    className="bg-black/10 dark:bg-black/50 text-muted-foreground border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 outline-none text-[10px] sm:text-[11px] font-bold tracking-[0.15em] uppercase cursor-pointer hover:text-foreground transition-all appearance-none text-center"
+                    title="Connection Filter"
+                  >
+                    <option value="all">ALL NODES</option>
+                    <option value="online">ONLINE</option>
+                    <option value="offline">OFFLINE</option>
+                  </select>
+               </div>
+            </div>
+
+         </div>
       </div>
 
       <div className="flex-1 w-full min-h-0 relative z-[1]">
@@ -277,11 +350,11 @@ export const MapDisplay = React.memo(() => {
         <div className="absolute top-4 right-4 z-[9999] flex flex-col gap-2 relative pointer-events-none">
           <div className="absolute top-0 right-0 flex flex-col gap-2 pointer-events-auto">
             <LiveCompass className="mb-2" />
-            <div className="flex flex-col bg-[#151619]/90 backdrop-blur-sm border border-[#2A2C32] rounded-md overflow-hidden shadow-2xl">
-              <button onClick={() => setMapType('default')} className={cn("p-2 transition-all hover:bg-[#2A2C32] flex items-center justify-center", mapType === 'default' ? "bg-red-500/20 text-red-500" : "text-[#8E9299]")} title="Vector Map"><Map className="w-4 h-4" /></button>
-              <button onClick={() => setMapType('satellite')} className={cn("p-2 transition-all hover:bg-[#2A2C32] border-t border-[#2A2C32] flex items-center justify-center", mapType === 'satellite' ? "bg-red-500/20 text-red-500" : "text-[#8E9299]")} title="Satellite Imagery"><Globe className="w-4 h-4" /></button>
+            <div className="flex flex-col bg-card/90 backdrop-blur-sm border border-border rounded-md overflow-hidden shadow-2xl">
+              <button onClick={() => setMapType('default')} className={cn("p-2 transition-all hover:bg-muted dark:bg-muted/80 flex items-center justify-center", mapType === 'default' ? "bg-red-500/20 text-red-500" : "text-muted-foreground")} title="Vector Map"><Map className="w-4 h-4" /></button>
+              <button onClick={() => setMapType('satellite')} className={cn("p-2 transition-all hover:bg-muted dark:bg-muted/80 border-t border-border flex items-center justify-center", mapType === 'satellite' ? "bg-red-500/20 text-red-500" : "text-muted-foreground")} title="Satellite Imagery"><Globe className="w-4 h-4" /></button>
             </div>
-            <button onClick={() => window.dispatchEvent(new Event('RECENTER_MAP'))} className="bg-[#151619]/90 border border-[#2A2C32] p-2 rounded-md shadow-2xl hover:bg-[#2A2C32] text-white transition-colors" title="Locate Me">
+            <button onClick={() => window.dispatchEvent(new Event('RECENTER_MAP'))} className="bg-card/90 border border-border p-2 rounded-md shadow-2xl hover:bg-muted dark:bg-muted/80 text-foreground transition-colors" title="Locate Me">
               <LocateFixed className="w-4 h-4" />
             </button>
           </div>
@@ -297,10 +370,10 @@ export const MapDisplay = React.memo(() => {
           ) : (
              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-[pulse_3s_ease-in-out_infinite]" />
-                <span className="text-[10px] font-mono text-white/90">LIVE_TRACKING.OS</span>
+                <span className="text-[10px] font-mono text-foreground/90">LIVE_TRACKING.OS</span>
              </div>
           )}
-          <div className="font-mono text-[9px] text-[#8E9299]/80 ml-4 mt-1">
+          <div className="font-mono text-[9px] text-muted-foreground/80 ml-4 mt-1">
              MARKERS: {processedMarkers.length}<br/>
              LAT: {currentViewCenter[0].toFixed(5)}<br/>
              LNG: {currentViewCenter[1].toFixed(5)}
@@ -309,11 +382,11 @@ export const MapDisplay = React.memo(() => {
 
         <MapContainer center={currentViewCenter} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false} maxZoom={18}>
           <TileLayer
-            key={mapType} 
+            key={mapType + theme} 
             attribution=""
             url={mapType === 'satellite' 
               ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' 
-              : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'}
+              : ((resolvedTheme || theme) === 'light' ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png')}
           />
           
           <MapControls 
@@ -333,7 +406,7 @@ export const MapDisplay = React.memo(() => {
             </>
           )}
 
-          <MarkerClusterGroup chunkedLoading maxClusterRadius={40}>
+          <MarkerClusterGroup chunkedLoading maxClusterRadius={40} iconCreateFunction={createClusterCustomIcon}>
             {processedMarkers.map(marker => {
               let iconType = nodeIcon;
               if (marker.type === 'SOS') iconType = marker.status === 'OFFLINE' ? offlineSosIcon : sosIcon;
@@ -343,30 +416,30 @@ export const MapDisplay = React.memo(() => {
               return (
                 <Marker key={marker.id} position={[marker.latitude, marker.longitude]} icon={iconType}>
                   <Popup className="custom-popup">
-                    <div className="p-2 w-[220px]">
-                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
-                        <h3 className={cn("font-bold text-sm", marker.type === 'SOS' ? "text-red-600" : marker.type === 'RELAY' ? "text-blue-600" : "text-green-600")}>
+                    <div className="p-3 w-[220px]">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-border">
+                        <h3 className={cn("font-bold text-sm tracking-wide", marker.type === 'SOS' ? "text-red-500" : marker.type === 'RELAY' ? "text-purple-500" : "text-blue-500")}>
                           {marker.type === 'SOS' ? 'EMERGENCY' : marker.type} NODE
                         </h3>
-                        {marker.status === 'OFFLINE' && <span className="bg-gray-200 text-gray-600 text-[9px] px-1.5 pt-0.5 rounded uppercase font-bold">Offline</span>}
+                        {marker.status === 'OFFLINE' && <span className="bg-muted dark:bg-muted/80 text-muted-foreground text-[9px] px-1.5 pt-0.5 rounded uppercase font-bold tracking-widest border border-[#444]">Offline</span>}
                       </div>
                       
-                      {marker.message && <p className="text-sm mb-3 italic">"{marker.message}"</p>}
+                      {marker.message && <p className="text-[13px] mb-3 italic text-muted-foreground bg-card py-2 px-3 rounded-md border border-black/5 dark:border-white/5">"{marker.message}"</p>}
                       
-                      <div className="flex flex-col gap-1 text-[11px] text-gray-600 font-mono mb-3">
+                      <div className="flex flex-col gap-1 text-[11px] text-muted-foreground font-mono mb-3 bg-[#111214] p-2 rounded-md border border-border">
                         <div className="flex justify-between">
                           <span>DISTANCE:</span>
-                          <span className="font-bold text-black">{marker.distance?.toFixed(2) || '?'} km</span>
+                          <span className="font-bold text-foreground">{marker.distance?.toFixed(2) || '?'} km</span>
                         </div>
                         <div className="flex justify-between">
                           <span>UPDATED:</span>
-                          <span>{formatDistanceToNow(marker.timestamp, { addSuffix: true })}</span>
+                          <span className="text-foreground">{formatDistanceToNow(marker.timestamp, { addSuffix: true })}</span>
                         </div>
                       </div>
 
                       <button 
                         onClick={() => openGoogleMaps(marker.latitude, marker.longitude)}
-                        className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-1.5 rounded flex items-center justify-center gap-2 text-xs font-bold"
+                        className="w-full bg-foreground text-background hover:bg-foreground/80 transition-colors py-2 rounded flex items-center justify-center gap-2 text-xs font-bold tracking-wide mt-1"
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> NAVIGATE
                       </button>
@@ -381,18 +454,24 @@ export const MapDisplay = React.memo(() => {
       </div>
       
       {/* Legend Footer */}
-      <div className="bg-[#0A0A0B] border-t border-[#2A2C32] p-2 flex flex-wrap gap-4 items-center justify-center text-[10px] font-mono tracking-widest text-[#8E9299]">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]" /> SOS
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-blue-500" /> USER
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-[#a855f7]" /> RELAY
-        </div>
-        <div className="flex items-center gap-1.5 opacity-50">
-          <div className="w-2 h-2 rounded-full bg-[#8E9299]" /> OFFLINE
+      <div className="bg-transparent p-4 flex flex-wrap gap-4 items-center justify-center text-[10px] font-mono tracking-widest text-muted-foreground z-[10] relative shrink-0">
+         <div className="bg-card/90 dark:bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-black/10 dark:border-white/10 flex flex-wrap justify-center gap-6 shadow-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_10px_#ef4444]" /> 
+            <span className="text-foreground font-bold">EMERGENCY</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9] shadow-[0_0_10px_#0ea5e9]" /> 
+            <span className="text-foreground font-bold">USER</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#a855f7] shadow-[0_0_10px_#a855f7]" /> 
+            <span className="text-foreground font-bold">MESH RELAY</span>
+          </div>
+          <div className="flex items-center gap-2.5 opacity-60">
+            <div className="w-2.5 h-2.5 rounded-full border border-white/30 bg-[#3f3f46]" /> 
+            <span className="text-muted-foreground font-bold">OFFLINE</span>
+          </div>
         </div>
       </div>
     </div>

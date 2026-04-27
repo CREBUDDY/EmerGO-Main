@@ -1,45 +1,47 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useVoiceStressAnalysis } from './useVoiceStressAnalysis';
 
 export type RiskScore = {
-  fallScore: Int;        // 0-40
-  movementScore: Int;    // 0-20
-  inactivityScore: Int;  // 0-25
-  orientationScore: Int; // 0-15
-  impactScore: Int;      // 0-15
-  voiceScore: Int;       // 0-30
+  dropScore: Int;        // 0-10
+  accelerationScore: Int;// 0-10
+  inactivityScore: Int;  // 0-10
+  orientationScore: Int; // 0-10
+  voiceScore: Int;       // 0-60
 };
 
 export type Int = number;
 
-export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
+export const useAutoSOS = (enabled: boolean = true, threshold: number = 50) => {
+  useVoiceStressAnalysis(enabled);
+  
   const [scores, setScores] = useState<RiskScore>({
-    fallScore: 0,
-    movementScore: 0,
+    dropScore: 0,
+    accelerationScore: 0,
     inactivityScore: 0,
     orientationScore: 0,
-    impactScore: 0,
     voiceScore: 0
   });
-
-  const totalScore = scores.fallScore + scores.movementScore + scores.inactivityScore + scores.orientationScore + scores.impactScore + scores.voiceScore;
 
   const [triggerStatus, setTriggerStatus] = useState<"Monitoring..." | "Triggering SOS in 5s..." | "SOS TRIGGERED">("Monitoring...");
   const lastTriggerTime = useRef<number>(0);
   const COOLDOWN_MS = 2 * 60 * 1000;
 
+  // Total score calculation based on strict weightages
+  const totalScore = Math.min(100, scores.voiceScore + scores.dropScore + scores.accelerationScore + scores.inactivityScore + scores.orientationScore);
+
   // Sensor state refs for detectors
-  const fallState = useRef({
+  const dropState = useRef({
     inFreefall: false,
     freefallStartTime: 0,
-    hasFallen: false,
-    lastFallTime: 0
+    hasDropped: false,
+    lastDropTime: 0
   });
 
-  const impactState = useRef({
+  const accelState = useRef({
     lastMag: 9.8,
     lastTime: 0,
-    hasImpact: false,
-    lastImpactTime: 0
+    hasHighAccel: false,
+    lastAccelTime: 0
   });
 
   const inactivityState = useRef({
@@ -52,75 +54,35 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
   });
 
   const maxScores = useRef<RiskScore>({
-    fallScore: 0,
-    movementScore: 0,
+    dropScore: 0,
+    accelerationScore: 0,
     inactivityScore: 0,
     orientationScore: 0,
-    impactScore: 0,
     voiceScore: 0
   });
 
   useEffect(() => {
     if (!enabled) {
       setScores({
-        fallScore: 0,
-        movementScore: 0,
+        dropScore: 0,
+        accelerationScore: 0,
         inactivityScore: 0,
         orientationScore: 0,
-        impactScore: 0,
         voiceScore: 0
       });
       maxScores.current = {
-        fallScore: 0,
-        movementScore: 0,
+        dropScore: 0,
+        accelerationScore: 0,
         inactivityScore: 0,
         orientationScore: 0,
-        impactScore: 0,
         voiceScore: 0
       };
       setTriggerStatus("Monitoring...");
       return;
     }
 
-    // --- VOICE ANALYSIS (Web Speech API + Audio Context) ---
-    // Try to get audio independently
-    let audioCtx: AudioContext;
-    let analyser: AnalyserNode;
-    let source: MediaStreamAudioSourceNode;
-    let stream: MediaStream;
-    let dataArray: Uint8Array;
-    let volumePoller: NodeJS.Timeout;
-
-    const KEYWORDS = ["help", "emergency", "stop", "please", "aah", "ambulance", "danger", "robber"];
-
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(s => {
-        stream = s;
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        source = audioCtx.createMediaStreamSource(stream);
-        source.connect(analyser);
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        volumePoller = setInterval(() => {
-           if (!stream.active) return;
-           analyser.getByteFrequencyData(dataArray);
-           let sum = 0;
-           for(let i=0; i<dataArray.length;i++) sum+=dataArray[i];
-           const vol = sum / dataArray.length;
-           
-           if (vol > 80) { // loud noise detected
-              let currentScores = { ...maxScores.current };
-              const vScore = Math.min(30, Math.floor(vol / 4));
-              if (vScore > currentScores.voiceScore) {
-                 currentScores.voiceScore = vScore;
-                 maxScores.current = currentScores;
-                 setScores(currentScores);
-              }
-           }
-        }, 100);
-      }).catch(()=>console.warn("AutoSOS: Audio level permission denied."));
+    // --- VOICE ANALYSIS & COMMANDS (Web Speech API) ---
+    const KEYWORDS = ["sos", "help me", "emergency", "i need help"];
 
     let recognition: any = null;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -128,25 +90,45 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
       recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.lang = "en-US";
+      
       recognition.onresult = (event: any) => {
         let text = "";
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           text += event.results[i][0].transcript + " ";
         }
-        const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+        text = text.toLowerCase();
         
-        let matchCount = 0;
-        words.forEach(w => {
-           if (KEYWORDS.includes(w)) matchCount++;
-        });
+        const shouldTriggerSOS = KEYWORDS.some((keyword) => text.includes(keyword));
 
-        if (matchCount > 0) {
+        if (shouldTriggerSOS) {
            let currentScores = { ...maxScores.current };
-           const vScore = Math.min(30, currentScores.voiceScore + (matchCount * 10));
-           if (vScore > currentScores.voiceScore) {
-              currentScores.voiceScore = vScore;
-              maxScores.current = currentScores;
-              setScores(currentScores);
+           // Instantly max out all scores to force a trigger (Total = 100)
+           currentScores.voiceScore = 60;
+           currentScores.dropScore = 10;
+           currentScores.accelerationScore = 10;
+           currentScores.inactivityScore = 10;
+           currentScores.orientationScore = 10;
+           
+           maxScores.current = currentScores;
+           setScores(currentScores);
+        } else {
+           // Basic stress text detection
+           let matchCount = 0;
+           const words = text.split(/\s+/).filter(w => w.length > 0);
+           const stressWords = ["help", "stop", "please", "aah", "danger"];
+           words.forEach(w => {
+              if (stressWords.includes(w)) matchCount++;
+           });
+           
+           if (matchCount > 0) {
+              let currentScores = { ...maxScores.current };
+              const vScore = Math.min(60, currentScores.voiceScore + (matchCount * 10));
+              if (vScore > currentScores.voiceScore) {
+                 currentScores.voiceScore = vScore;
+                 maxScores.current = currentScores;
+                 setScores(currentScores);
+              }
            }
         }
       };
@@ -162,51 +144,50 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
     const handleMotion = (event: DeviceMotionEvent) => {
       const now = Date.now();
       const accel = event.accelerationIncludingGravity;
-      const rot = event.rotationRate;
 
       let currentScores = { ...maxScores.current };
       let changed = false;
 
-      // 1. Fall & Impact Detection
+      // 1. Drop & Acceleration Detection
       if (accel && accel.x !== null && accel.y !== null && accel.z !== null) {
         const mag = Math.sqrt(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z);
         
-        // Impact detector (jerk)
-        const dt = now - impactState.current.lastTime;
-        if (dt > 0 && impactState.current.lastTime > 0) {
-          const jerk = Math.abs(mag - impactState.current.lastMag) / (dt / 1000);
-          if (jerk > 50) { // arbitrary jerk threshold
-            const iScore = Math.min(15, Math.floor(jerk / 10));
-            if (iScore > currentScores.impactScore) {
-              currentScores.impactScore = iScore;
-              impactState.current.hasImpact = true;
-              impactState.current.lastImpactTime = now;
+        // Acceleration / Jerk detector (max 10)
+        const dt = now - accelState.current.lastTime;
+        if (dt > 0 && accelState.current.lastTime > 0) {
+          const jerk = Math.abs(mag - accelState.current.lastMag) / (dt / 1000);
+          if (jerk > 50) { 
+            const aScore = Math.min(10, Math.floor(jerk / 20));
+            if (aScore > currentScores.accelerationScore) {
+              currentScores.accelerationScore = aScore;
+              accelState.current.hasHighAccel = true;
+              accelState.current.lastAccelTime = now;
               changed = true;
             }
           }
         }
-        impactState.current.lastMag = mag;
-        impactState.current.lastTime = now;
+        accelState.current.lastMag = mag;
+        accelState.current.lastTime = now;
 
-        // Fall detector (freefall -> impact)
+        // Drop detector (freefall -> impact) (max 10)
         if (mag < 3) {
-          if (!fallState.current.inFreefall) {
-            fallState.current.inFreefall = true;
-            fallState.current.freefallStartTime = now;
+          if (!dropState.current.inFreefall) {
+            dropState.current.inFreefall = true;
+            dropState.current.freefallStartTime = now;
           }
         } else {
-          if (fallState.current.inFreefall) {
-            const freefallDuration = now - fallState.current.freefallStartTime;
-            if (freefallDuration > 200 && mag > 25) { // Impact after freefall
-              const fScore = Math.min(40, 20 + Math.floor((mag - 25) * 1));
-              if (fScore > currentScores.fallScore) {
-                 currentScores.fallScore = fScore;
-                 fallState.current.hasFallen = true;
-                 fallState.current.lastFallTime = now;
+          if (dropState.current.inFreefall) {
+            const freefallDuration = now - dropState.current.freefallStartTime;
+            if (freefallDuration > 200 && mag > 20) { 
+              const dScore = Math.min(10, 5 + Math.floor((mag - 20) / 2));
+              if (dScore > currentScores.dropScore) {
+                 currentScores.dropScore = dScore;
+                 dropState.current.hasDropped = true;
+                 dropState.current.lastDropTime = now;
                  changed = true;
               }
             }
-            fallState.current.inFreefall = false;
+            dropState.current.inFreefall = false;
           }
         }
 
@@ -215,8 +196,7 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
           inactivityState.current.lastMovementTime = now;
         }
 
-        // Orientation
-        // Rough estimate of upright if y is near 9.8 or -9.8
+        // Orientation (max 10)
         const isUpright = Math.abs(accel.y) > 7 && Math.abs(accel.x) < 4 && Math.abs(accel.z) < 4;
         const isHorizontal = Math.abs(accel.z) > 7 || Math.abs(accel.x) > 7;
 
@@ -225,32 +205,20 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
           orientState.current.uprightTime = now;
         } else if (isHorizontal && orientState.current.wasUpright) {
           const timeSinceUpright = now - orientState.current.uprightTime;
-          if (timeSinceUpright < 1000) { // sudden change
-            if (currentScores.orientationScore < 15) {
-              currentScores.orientationScore = 15;
+          if (timeSinceUpright < 1000) { 
+            if (currentScores.orientationScore < 10) {
+              currentScores.orientationScore = 10;
               changed = true;
             }
           }
         }
       }
 
-      // 2. Movement (Gyro)
-      if (rot && rot.alpha !== null && rot.beta !== null && rot.gamma !== null) {
-        const rotMag = Math.sqrt(rot.alpha*rot.alpha + rot.beta*rot.beta + rot.gamma*rot.gamma);
-        if (rotMag > 300) {
-          const mScore = Math.min(20, Math.floor(rotMag / 20));
-          if (mScore > currentScores.movementScore) {
-            currentScores.movementScore = mScore;
-            changed = true;
-          }
-        }
-      }
-
-      // 3. Inactivity (Requires prior fall or impact)
-      if (fallState.current.hasFallen || impactState.current.hasImpact) {
+      // 3. Inactivity (Requires prior drop or acceleration) (max 10)
+      if (dropState.current.hasDropped || accelState.current.hasHighAccel) {
          const timeSinceMoved = now - inactivityState.current.lastMovementTime;
-         if (timeSinceMoved > 5000) { // 5+ seconds of inactivity
-            const inactScore = Math.min(25, Math.floor((timeSinceMoved - 5000) / 1000 * 5));
+         if (timeSinceMoved > 5000) { 
+            const inactScore = Math.min(10, Math.floor((timeSinceMoved - 5000) / 1000 * 2));
             if (inactScore > currentScores.inactivityScore) {
                currentScores.inactivityScore = inactScore;
                changed = true;
@@ -279,9 +247,8 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
          }
        };
 
-       decayField('fallScore', 2);
-       decayField('movementScore', 3);
-       decayField('impactScore', 2);
+       decayField('dropScore', 1);
+       decayField('accelerationScore', 1);
        decayField('orientationScore', 1);
        decayField('voiceScore', 2);
 
@@ -291,10 +258,10 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
             decayed.inactivityScore = 0;
             changed = true;
          }
-         // Also reset fall/impact state if user recovered (moved a lot)
-         if (now - Math.max(fallState.current.lastFallTime, impactState.current.lastImpactTime) > 10000) {
-            fallState.current.hasFallen = false;
-            impactState.current.hasImpact = false;
+         // Also reset drop/accel state if user recovered (moved a lot)
+         if (now - Math.max(dropState.current.lastDropTime, accelState.current.lastAccelTime) > 10000) {
+            dropState.current.hasDropped = false;
+            accelState.current.hasHighAccel = false;
          }
        }
 
@@ -307,9 +274,6 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
       clearInterval(decayInterval);
-      if (volumePoller) clearInterval(volumePoller);
-      if (stream) stream.getTracks().forEach(t => t.stop());
-      if (audioCtx) audioCtx.close().catch(()=>{});
       
       if (recognition) {
         recognition.onend = null;
@@ -322,11 +286,10 @@ export const useAutoSOS = (enabled: boolean = true, threshold: number = 70) => {
     setTriggerStatus("Monitoring...");
     lastTriggerTime.current = Date.now() - COOLDOWN_MS + 10000;
     maxScores.current = {
-      fallScore: 0,
-      movementScore: 0,
+      dropScore: 0,
+      accelerationScore: 0,
       inactivityScore: 0,
       orientationScore: 0,
-      impactScore: 0,
       voiceScore: 0
     };
     setScores(maxScores.current);

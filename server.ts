@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import path from "path";
 import dotenv from "dotenv";
+import twilio from "twilio";
 
 dotenv.config();
 
@@ -68,10 +69,10 @@ Respond ONLY with a JSON object. No markdown wrapping.
          return res.status(400).json({ error: "No emergency contacts provided." });
       }
 
-      const twilio = require('twilio')(accountSid, authToken);
+      const client = twilio(accountSid, authToken);
 
       const promises = contacts.map((contact: string) => 
-        twilio.messages.create({
+        client.messages.create({
           body: message,
           from: twilioNumber,
           to: contact
@@ -96,7 +97,7 @@ Respond ONLY with a JSON object. No markdown wrapping.
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

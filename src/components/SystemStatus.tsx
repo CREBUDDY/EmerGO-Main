@@ -155,8 +155,8 @@ const StatusItem = ({ icon, label, value, sub }: { icon: React.ReactNode, label:
       <span className="status-label">{label}</span>
     </div>
     <div className="flex flex-col">
-      <span className="text-xl font-heading text-white leading-tight uppercase tracking-wide">{value}</span>
-      <span className="text-[10px] font-sans text-[#8E9299]/60 truncate tracking-wide" title={sub}>{sub}</span>
+      <span className="text-xl font-heading text-foreground leading-tight uppercase tracking-wide">{value}</span>
+      <span className="text-[10px] font-sans text-muted-foreground/60 truncate tracking-wide" title={sub}>{sub}</span>
     </div>
   </div>
 );

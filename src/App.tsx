@@ -1,3 +1,4 @@
+import { useTheme } from 'next-themes';
 import { useEffect, useState, useRef } from 'react';
 import { Radar } from './components/Radar';
 import { SOSPanel } from './components/SOSPanel';
@@ -12,7 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { Toaster, toast } from 'sonner';
 import { auth, db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, updateDoc, getDoc, collection, query, where, onSnapshot, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, getDocs, writeBatch, collection, query, where, onSnapshot, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { app } from '@/src/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -35,15 +36,127 @@ import { MobileNavBar } from './components/MobileNavBar';
 import { useCapacitorSetup } from './hooks/useCapacitorSetup';
 
 import { Capacitor } from '@capacitor/core';
-import { Geolocation, WatchPositionCallback } from '@capacitor/geolocation';
+import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-export default function App() {
+import { LoadingProvider, useLoading } from './contexts/LoadingContext';
+import { GlobalLoader } from './components/GlobalLoader';
+
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+function PublicTrackingView({ trackId }: { trackId: string }) {
+  const { theme, resolvedTheme } = useTheme();
+  const [eventData, setEventData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'sos_events', trackId), (docSnap) => {
+      if (docSnap.exists()) {
+        setEventData({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        setEventData(null);
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [trackId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-t-2 border-red-500 rounded-full" />
+      </div>
+    );
+  }
+
+  if (!eventData) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Shield className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
+        <h2 className="text-foreground text-xl font-bold tracking-widest uppercase mb-2">Event Not Found</h2>
+        <p className="text-muted-foreground font-mono text-center">This SOS event may have been resolved or deleted.</p>
+        <Button onClick={() => window.location.href = '/'} variant="outline" className="mt-8 border-border text-foreground">Return to Home</Button>
+      </div>
+    );
+  }
+
+  const sosIcon = new L.DivIcon({
+    html: `<div style="width: 24px; height: 24px; background: #ef4444; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(239,68,68,0.6); display: flex; align-items: center; justify-content: center;"><div style="width: 6px; height: 6px; background: white; border-radius: 50%;"></div></div>`,
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  return (
+    <div className="w-screen h-screen relative bg-background">
+      <div className="absolute top-4 left-4 z-[9999] bg-card/90 backdrop-blur-md p-4 rounded-xl border border-red-500/50 shadow-2xl max-w-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-3 h-3 rounded-full animate-pulse bg-red-500" />
+          <h2 className="text-red-500 font-bold tracking-widest text-sm uppercase">LIVE EMERGENCY TRACKING</h2>
+        </div>
+        <div className="space-y-2 text-xs font-mono">
+          <div className="flex justify-between border-b border-border pb-2">
+            <span className="text-muted-foreground">STATUS</span>
+            <span className={eventData.isResolved ? 'text-green-500' : 'text-red-500 font-bold'}>
+              {eventData.isResolved ? 'RESOLVED' : 'ACTIVE'}
+            </span>
+          </div>
+          <div className="flex justify-between border-b border-border pb-2">
+             <span className="text-muted-foreground">LAST UPDATED</span>
+             <span className="text-foreground">{eventData.timestamp?.toMillis ? new Date(eventData.timestamp.toMillis()).toLocaleTimeString() : 'Just now'}</span>
+          </div>
+          <div className="pt-1">
+             <span className="text-muted-foreground block mb-1">MESSAGE</span>
+             <span className="text-foreground bg-black/10 dark:bg-black/40 p-2 rounded block border border-black/5 dark:border-white/5 break-words">
+                {eventData.transcript || eventData.message || "Emergency Help Needed!"}
+             </span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="w-full h-full">
+        {typeof window !== 'undefined' && eventData.latitude && eventData.longitude && (
+          <MapContainer 
+            center={[eventData.latitude, eventData.longitude]} 
+            zoom={15} 
+            style={{ width: '100%', height: '100%' }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution=""
+              url={(resolvedTheme || theme) === 'light' ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
+            />
+            <Marker position={[eventData.latitude, eventData.longitude]} icon={sosIcon}>
+               <Popup className="custom-popup">
+                 <div className="font-bold text-red-500 text-center tracking-wide">EMERGENCY LOCATION</div>
+                 <div className="text-[10px] text-center text-gray-500 mt-1">{eventData.latitude.toFixed(4)}, {eventData.longitude.toFixed(4)}</div>
+               </Popup>
+            </Marker>
+          </MapContainer>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
+  const trackId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('track') : null;
+
   useCapacitorSetup();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const notifiedSosIds = useRef<Set<string>>(new Set());
+  const { showLoading, hideLoading } = useLoading();
+  
+  useEffect(() => {
+    if (user && !userLocation) {
+        showLoading("Acquiring GPS Signal...");
+    } else {
+        hideLoading();
+    }
+  }, [user, userLocation]);
 
   // Auth states
   const [email, setEmail] = useState('');
@@ -154,6 +267,25 @@ export default function App() {
         await updateDoc(userRef, {
           lastActive: serverTimestamp()
         });
+
+        // 3. Update any active SOS events for this user with new location
+        const sosQuery = query(
+          collection(db, 'sos_events'),
+          where('userId', '==', user.uid),
+          where('isResolved', '==', false)
+        );
+        const activeSosSnap = await getDocs(sosQuery);
+        
+        if (!activeSosSnap.empty) {
+          const batch = writeBatch(db);
+          activeSosSnap.docs.forEach((d) => {
+             batch.update(d.ref, {
+               latitude,
+               longitude
+             });
+          });
+          await batch.commit();
+        }
       } catch (error) {
         // Silently handle background update errors in production usually, 
         // but for this task we should probably log them correctly as per directives
@@ -245,7 +377,7 @@ export default function App() {
               toast.error("NEARBY EMERGENCY DETECTED", {
                 description: `${distance.toFixed(1)}km away: ${sos.message || sos.transcript}`,
                 duration: 10000,
-                className: "hardware-card border-red-500/50 text-white",
+                className: "hardware-card border-red-500/50 text-foreground",
               });
 
               // Show push notification
@@ -333,23 +465,27 @@ export default function App() {
     }
   };
 
+  if (trackId) {
+    return <PublicTrackingView trackId={trackId} />;
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
-        <div className="text-white font-mono animate-pulse">INITIALIZING AESN SECURE LINK...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground font-mono animate-pulse">INITIALIZING AESN SECURE LINK...</div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#E6E6E6] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="hardware-card p-8 max-w-md w-full space-y-6">
           <div className="text-center space-y-2 flex flex-col items-center">
             <div className="w-16 h-16 bg-green-500 rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.4)] mb-4">
-              <Shield className="w-8 h-8 text-white" />
+              <Shield className="w-8 h-8 text-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight uppercase flex items-center justify-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight uppercase flex items-center justify-center gap-2">
               AUTO SOS ACCESS
               <Shield className="w-5 h-5 text-green-500" />
             </h1>
@@ -364,32 +500,32 @@ export default function App() {
 
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs text-[#8E9299] font-mono tracking-wider ml-1">OPERATOR EMAIL</Label>
+              <Label className="text-xs text-muted-foreground font-mono tracking-wider ml-1">OPERATOR EMAIL</Label>
               <Input 
                 type="email" 
                 placeholder="Secure Link Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-[#0A0A0B] border-[#2A2C32] text-white focus-visible:ring-green-500 placeholder:text-[#8E9299]/30 h-12"
+                className="bg-background border-border text-foreground focus-visible:ring-green-500 placeholder:text-muted-foreground/30 h-12"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-[#8E9299] font-mono tracking-wider ml-1">PASSCODE / ENCRYPTION KEY</Label>
+              <Label className="text-xs text-muted-foreground font-mono tracking-wider ml-1">PASSCODE / ENCRYPTION KEY</Label>
               <Input 
                 type="password" 
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-[#0A0A0B] border-[#2A2C32] text-white focus-visible:ring-green-500 placeholder:text-[#8E9299]/30 h-12"
+                className="bg-background border-border text-foreground focus-visible:ring-green-500 placeholder:text-muted-foreground/30 h-12"
               />
             </div>
             
             <Button 
               type="submit"
               disabled={authLoading}
-              className="w-full bg-green-500 hover:bg-green-600 text-white h-12 text-sm font-bold tracking-widest mt-6"
+              className="w-full bg-green-500 hover:bg-green-600 text-foreground h-12 text-sm font-bold tracking-widest mt-6"
             >
               {authLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -402,18 +538,18 @@ export default function App() {
             </Button>
           </form>
 
-          <div className="pt-4 border-t border-[#2A2C32] text-center space-y-4">
+          <div className="pt-4 border-t border-border text-center space-y-4">
             <button 
               type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setAuthError('');
               }}
-              className="text-[#8E9299] hover:text-white text-xs font-mono transition-colors"
+              className="text-muted-foreground hover:text-foreground text-xs font-mono transition-colors"
             >
               {isSignUp ? 'ALREADY REGISTERED? INITIATE LOGIN' : 'REQUIRE ACCESS? REQUEST PREMIUM LINK'}
             </button>
-            <p className="text-[10px] font-mono text-[#8E9299] opacity-50 max-w-[250px] mx-auto leading-relaxed">
+            <p className="text-[10px] font-mono text-muted-foreground opacity-50 max-w-[250px] mx-auto leading-relaxed">
               BY {isSignUp ? 'INITIALIZING' : 'AUTHENTICATING'}, YOU AGREE TO EMERGENCY DATA SHARING PROTOCOLS.
             </p>
           </div>
@@ -423,7 +559,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E6E6E6] p-4 md:p-8 font-sans pb-20 sm:pb-8 relative">
+    <div className="min-h-screen bg-background p-4 md:p-8 font-sans pb-20 sm:pb-8 relative">
       <Toaster position="top-right" theme="dark" />
       <PermissionsModal />
       <MobileNavBar />
@@ -432,11 +568,11 @@ export default function App() {
         <header className="flex items-center justify-between hardware-card p-3 sm:p-4 px-4 sm:px-6 gap-2 sm:gap-4">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.4)] flex-shrink-0">
-              <Shield className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <Shield className="w-4 h-4 sm:w-6 sm:h-6 text-foreground" />
             </div>
             <div className="min-w-0 flex items-center gap-4">
               <div>
-                <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate uppercase flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-bold text-foreground tracking-tight truncate uppercase flex items-center gap-2">
                   AUTO SOS
                   <Shield className="w-4 h-4 text-green-500" />
                 </h1>
@@ -456,7 +592,7 @@ export default function App() {
               </div>
               <HeaderClock />
             </div>
-            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-[#1A1C20] animate-pulse" />}>
+            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-card animate-pulse" />}>
               <div className="flex items-center gap-2 sm:gap-4">
                 <NotificationDropdown />
                 <SettingsModal />
@@ -493,5 +629,14 @@ export default function App() {
         />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LoadingProvider>
+      <GlobalLoader />
+      <AppContent />
+    </LoadingProvider>
   );
 }

@@ -88,7 +88,7 @@ service cloud.firestore {
     }
 
     match /sos_events/{eventId} {
-      allow get: if isSignedIn();
+      allow get: if true;
       allow list: if isAdmin() || (isSignedIn() && (resource.data.isResolved == false || resource.data.userId == request.auth.uid));
       
       allow create: if isVerified() && isValidId(eventId) && isValidSOSEvent(incoming()) &&

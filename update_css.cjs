@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const cssContent = `
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -281,3 +283,7 @@
 .marker-cluster-large div {
   background-color: rgba(241, 128, 23, 0.6);
 }
+`;
+
+fs.writeFileSync('./src/index.css', cssContent);
+console.log('Updated index.css');
